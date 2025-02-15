@@ -19,49 +19,79 @@ openai_client = OpenAI(api_key=os.getenv('OPENAI'))
 # Initialize ElevenLabs client
 elevenlabs_client = ElevenLabs(api_key=os.getenv('ELEVENLABS_API_KEY'))
 
+# Database configuration
+DATABASE_NAME = 'teachai.db'
+
+# Database connection context manager
+class DatabaseConnection:
+    def __init__(self):
+        self.conn = None
+
+    def __enter__(self):
+        self.conn = sqlite3.connect(DATABASE_NAME)
+        return self.conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.conn:
+            if exc_type is None:
+                self.conn.commit()
+            else:
+                self.conn.rollback()
+            self.conn.close()
+
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins
+
+# Configure CORS with specific options
+cors = CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
+# Health check endpoint
+@app.route('/health', methods=['GET', 'OPTIONS'])
+def health_check():
+    return jsonify({'status': 'ok'})
 
 # Initialize SQLite database
 def init_db():
-    conn = sqlite3.connect('teachai.db')
-    c = conn.cursor()
-    
-    # Questions table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question TEXT NOT NULL,
-            response TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            subject TEXT DEFAULT 'Computer Science',
-            teacher TEXT DEFAULT 'Dr. Smith'
-        )
-    ''')
-    
-    # Files table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename TEXT NOT NULL,
-            description TEXT,
-            upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            file_path TEXT NOT NULL
-        )
-    ''')
-    
-    # Students table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT NOT NULL UNIQUE,
-            name TEXT NOT NULL
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+    with DatabaseConnection() as conn:
+        c = conn.cursor()
+        
+        # Questions table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS questions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                question TEXT NOT NULL,
+                response TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                subject TEXT DEFAULT 'Computer Science',
+                teacher TEXT DEFAULT 'Dr. Smith'
+            )
+        ''')
+        
+        # Files table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                filename TEXT NOT NULL,
+                description TEXT,
+                upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                file_path TEXT NOT NULL
+            )
+        ''')
+        
+        # Students table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS students (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL
+            )
+        ''')
 
 init_db()
 
@@ -103,7 +133,7 @@ def create_teaching_prompt(question):
         "content": "You are an AI teaching assistant. Provide clear, concise, and helpful responses. "
         "Focus on explaining concepts in a way that's easy to understand while maintaining academic accuracy. "
         "If a question is unclear, ask for clarification. If topics are complex, break them down into simpler parts."
-        "Don't be too verbose, and make sure to return only plain text."
+        "Be somewhat concise, and make sure to return only plain text."
         "If needed, make sure to put out content in LaTeX format or use the conventions specific to that genre of question."
         "Be a great teacher!"
     },
@@ -192,6 +222,22 @@ def send_email(subject, body, recipients):
         print(f"Error sending email: {e}")
         return False
 
+def safe_generate_response(question):
+    """Safely generate AI response with error handling"""
+    try:
+        return generate_ai_response(question)
+    except Exception as e:
+        print(f"Error generating AI response: {e}")
+        return f"I apologize, but I encountered an error while processing your question. Please try again. Error: {str(e)}"
+
+def safe_generate_audio(text):
+    """Safely generate audio with error handling"""
+    try:
+        return text_to_speech_stream(text)
+    except Exception as e:
+        print(f"Error generating audio: {e}")
+        return None
+
 @app.route('/feedback', methods=['POST'])
 def feedback():
     try:
@@ -201,30 +247,33 @@ def feedback():
 
         question = data['question']
         
-        # Generate AI response
-        ai_response = generate_ai_response(question)
+        # Generate AI response with error handling
+        ai_response = safe_generate_response(question)
         
-        # Generate audio stream
-        audio_stream = text_to_speech_stream(ai_response)
+        # Generate audio stream with error handling
+        audio_stream = safe_generate_audio(ai_response)
         
-        # Get class info
-        conn = sqlite3.connect('teachai.db')
-        c = conn.cursor()
-        c.execute('SELECT subject, teacher FROM questions ORDER BY id DESC LIMIT 1')
-        result = c.fetchone()
-        subject = result[0] if result else 'Computer Science'
-        teacher = result[1] if result else 'Dr. Smith'
-        conn.close()
+        # If audio generation failed, continue without audio
+        audio_base64 = ''
+        if audio_stream:
+            audio_base64 = base64.b64encode(audio_stream.read()).decode('utf-8')
         
-        # Store the new question
-        c = conn.cursor()
-        c.execute('INSERT INTO questions (question, response, subject, teacher) VALUES (?, ?, ?, ?)',
-                  (question, ai_response, subject, teacher))
-        conn.commit()
-        conn.close()
+        # Get class info and store new question in a single transaction
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            
+            # Get latest class info
+            c.execute('SELECT subject, teacher FROM questions ORDER BY id DESC LIMIT 1')
+            result = c.fetchone()
+            subject = result[0] if result else 'Computer Science'
+            teacher = result[1] if result else 'Dr. Smith'
+            
+            # Store the new question
+            c.execute('INSERT INTO questions (question, response, subject, teacher) VALUES (?, ?, ?, ?)',
+                      (question, ai_response, subject, teacher))
         
         return jsonify({
-            'audio': base64.b64encode(audio_stream.read()).decode('utf-8'),
+            'audio': audio_base64,
             'response': ai_response,
             'subject': subject,
             'teacher': teacher
