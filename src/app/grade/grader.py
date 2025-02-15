@@ -99,7 +99,7 @@ def grade_all_answers(qa_pairs, answer_key_path, rubric_prompt=""):
 
 if __name__ == "__main__":
     sample_qa_pairs = [
-        ("1", "2*3=6"),
+        ("1", "2x3=6"),
         ("2", "1+2=3")
     ]
     

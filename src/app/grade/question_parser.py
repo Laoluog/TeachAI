@@ -34,10 +34,8 @@ def parse_questions_answers(ocr_text: str):
 if __name__ == "__main__":
     # Example usage
     sample_text = """
-    Name: John Doe
-    Q1. This is the student's answer for question 1.
-    Q2. This is the student's answer for question 2.
-    Some other text...
+    1. 2 x 3 = 8
+    2. 1 + 2 = 3
     """
     qa_pairs = parse_questions_answers(sample_text)
     print(qa_pairs)

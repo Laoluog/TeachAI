@@ -1,7 +1,9 @@
 import openai
 import base64
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 def encode_image_to_base64(image_path: str) -> str:
     """
     Encode an image file to a Base64 string.
@@ -61,7 +63,7 @@ def extract_text_from_image_with_openai(image_path: str) -> str:
 
 if __name__ == "__main__":
     try:
-        text_output = extract_text_from_image_with_openai("test1.png")
+        text_output = extract_text_from_image_with_openai("testesttest.jpg")
         print("Extracted Text:")
         print(text_output)
     except Exception as e:
