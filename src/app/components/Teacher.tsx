@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import styles from '../styles/Teacher.module.css';
+import { useRouter } from 'next/navigation';
 
 interface Question {
   id: number;
@@ -113,8 +114,16 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
     }
   };
 
+  const router = useRouter();
+
   return (
     <div className={styles.container}>
+      <button 
+        className={styles.backButton}
+        onClick={() => router.back()}
+      >
+        ← Back
+      </button>
       <nav className={styles.nav}>
         <button
           className={`${styles.tabButton} ${activeTab === 'questions' ? styles.active : ''}`}

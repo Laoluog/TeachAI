@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import styles from '../styles/Student.module.css';
+import { useRouter } from 'next/navigation';
 
 interface Question {
   id: number;
@@ -74,7 +75,9 @@ export default function Student({ questions, setQuestions }: StudentProps) {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Server response:', errorText);
+        throw new Error(`Server error: ${errorText || response.status}`);
       }
 
       const data = await response.json();
@@ -126,8 +129,16 @@ export default function Student({ questions, setQuestions }: StudentProps) {
     }, typingSpeed);
   };
 
+  const router = useRouter();
+
   return (
     <div className={styles.container}>
+      <button 
+        className={styles.backButton}
+        onClick={() => router.back()}
+      >
+        ← Back
+      </button>
       <div className={styles.classInfo}>
         <span>Subject: {subject}</span>
         <span>Teacher: {teacher}</span>

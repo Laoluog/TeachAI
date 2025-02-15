@@ -10,6 +10,15 @@ from typing import IO
 from io import BytesIO
 import sqlite3
 
+# Load environment variables
+load_dotenv()
+
+# Initialize OpenAI client
+openai_client = OpenAI(api_key=os.getenv('OPENAI'))
+
+# Initialize ElevenLabs client
+elevenlabs_client = ElevenLabs(api_key=os.getenv('ELEVENLABS_API_KEY'))
+
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins
@@ -112,16 +121,8 @@ def generate_ai_response(question):
         max_tokens=500
     )
     
-    # Store question and response in database
-    conn = sqlite3.connect('questions.db')
-    c = conn.cursor()
-    c.execute('INSERT INTO questions (question, response) VALUES (?, ?)',
-              (question, response.choices[0].message.content))
-    conn.commit()
-    conn.close()
-    
     return response.choices[0].message.content
-
+    
 def text_to_speech_stream(text):
     try:
         # Perform the text-to-speech conversion
@@ -210,7 +211,16 @@ def feedback():
         conn = sqlite3.connect('teachai.db')
         c = conn.cursor()
         c.execute('SELECT subject, teacher FROM questions ORDER BY id DESC LIMIT 1')
-        subject, teacher = c.fetchone()
+        result = c.fetchone()
+        subject = result[0] if result else 'Computer Science'
+        teacher = result[1] if result else 'Dr. Smith'
+        conn.close()
+        
+        # Store the new question
+        c = conn.cursor()
+        c.execute('INSERT INTO questions (question, response, subject, teacher) VALUES (?, ?, ?, ?)',
+                  (question, ai_response, subject, teacher))
+        conn.commit()
         conn.close()
         
         return jsonify({
