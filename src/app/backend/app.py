@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, redirect
 from flask_cors import CORS
 import google.generativeai as genai
 import elevenlabs
@@ -73,7 +73,6 @@ def generate_ai_response(question):
 #         return jsonify({'error': str(e)}), 500
 
 
-# Updated endpoint for sending emails using Mailgun
 @app.route('/api/send-email', methods=['POST'])
 def send_email():
     try:
@@ -88,14 +87,18 @@ def send_email():
         message = data.get('message')
 
         if not all([recipient, subject, message]):
-            return jsonify({'error': 'Missing required email parameters'}), 400
+            error_response = jsonify({'error': 'Missing required email parameters'})
+            error_response.status_code = 400
+            return error_response
 
         MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY')
         MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN')
         sender_email = os.getenv('SENDER_EMAIL')
 
         if not MAILGUN_API_KEY or not MAILGUN_DOMAIN or not sender_email:
-            return jsonify({'error': 'Mailgun configuration is missing'}), 500
+            error_response = jsonify({'error': 'Mailgun configuration is missing'})
+            error_response.status_code = 500
+            return error_response
 
         response = requests.post(
             f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
@@ -109,40 +112,21 @@ def send_email():
         )
 
         if response.status_code in [200, 202]:
-            return jsonify({'message': 'Email sent successfully!'}), 200
+            # For form submissions, redirect to your Next.js teacher page.
+            if not request.is_json:
+                return redirect("http://localhost:3000/teacherPage")
+            # For JSON requests, return JSON.
+            else:
+                return jsonify({'message': 'Email sent successfully!'}), 200
         else:
-            return jsonify({'error': 'Failed to send email.', 'details': response.text}), response.status_code
+            error_response = jsonify({'error': 'Failed to send email.', 'details': response.text})
+            error_response.status_code = response.status_code
+            return error_response
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
-
-@app.route('/send-email-page', methods=['GET'])
-def send_email_page():
-    html_content = '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Send Email</title>
-    </head>
-    <body>
-        <h1>Send Email</h1>
-        <form action="/api/send-email" method="post">
-            <label for="recipient">Recipient:</label>
-            <input type="email" id="recipient" name="recipient" value="teacher@example.com" required><br><br>
-            
-            <label for="subject">Subject:</label>
-            <input type="text" id="subject" name="subject" value="Test Email" required><br><br>
-            
-            <label for="message">Message:</label>
-            <textarea id="message" name="message" rows="4" cols="50">This is a test email from the GET page.</textarea><br><br>
-            
-            <button type="submit">Send Email</button>
-        </form>
-    </body>
-    </html>
-    '''
-    return html_content
+        error_response = jsonify({'error': str(e)})
+        error_response.status_code = 500
+        return error_response
 
 
 
