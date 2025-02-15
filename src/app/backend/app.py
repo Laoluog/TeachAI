@@ -14,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Configure API keys for Gemini and ElevenLabs
+# Configure API keys for Gemini and `Eleven`Labs
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 # ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
 
@@ -56,7 +56,7 @@ def generate_ai_response(question):
 #         question = data.get('question')
         
 #         if not question:
-#             return jsonify({'error': 'No question provided'}), 400
+#             return jsonify({'error    ': 'No question provided'}), 400
 
 #         # Generate AI response using Gemini
 #         ai_response = generate_ai_response(question)
@@ -72,11 +72,17 @@ def generate_ai_response(question):
 #     except Exception as e:
 #         return jsonify({'error': str(e)}), 500
 
-# New endpoint for sending emails using Mailgun
+
+# Updated endpoint for sending emails using Mailgun
 @app.route('/api/send-email', methods=['POST'])
 def send_email():
     try:
-        data = request.json
+        # Support both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
+        
         recipient = data.get('recipient')
         subject = data.get('subject')
         message = data.get('message')
@@ -84,7 +90,6 @@ def send_email():
         if not all([recipient, subject, message]):
             return jsonify({'error': 'Missing required email parameters'}), 400
 
-        # Get Mailgun configuration from environment variables
         MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY')
         MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN')
         sender_email = os.getenv('SENDER_EMAIL')
@@ -92,7 +97,6 @@ def send_email():
         if not MAILGUN_API_KEY or not MAILGUN_DOMAIN or not sender_email:
             return jsonify({'error': 'Mailgun configuration is missing'}), 500
 
-        # Send email via Mailgun
         response = requests.post(
             f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
             auth=("api", MAILGUN_API_KEY),
@@ -104,13 +108,43 @@ def send_email():
             },
         )
 
-        if response.status_code == 200:
+        if response.status_code in [200, 202]:
             return jsonify({'message': 'Email sent successfully!'}), 200
         else:
             return jsonify({'error': 'Failed to send email.', 'details': response.text}), response.status_code
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/send-email-page', methods=['GET'])
+def send_email_page():
+    html_content = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Send Email</title>
+    </head>
+    <body>
+        <h1>Send Email</h1>
+        <form action="/api/send-email" method="post">
+            <label for="recipient">Recipient:</label>
+            <input type="email" id="recipient" name="recipient" value="teacher@example.com" required><br><br>
+            
+            <label for="subject">Subject:</label>
+            <input type="text" id="subject" name="subject" value="Test Email" required><br><br>
+            
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" rows="4" cols="50">This is a test email from the GET page.</textarea><br><br>
+            
+            <button type="submit">Send Email</button>
+        </form>
+    </body>
+    </html>
+    '''
+    return html_content
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

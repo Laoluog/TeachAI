@@ -18,7 +18,7 @@ export default function TeacherPage() {
         headers: { 'Content-Type': 'application/json' },
         // You can include email parameters in the request body if needed.
         body: JSON.stringify({
-          recipient: 'teacher@example.com',
+          recipient: 'jrtamezvillarreal@gmail.com',
           subject: 'Test Email',
           message: 'This is a test email sent from the teacher page.',
         }),
