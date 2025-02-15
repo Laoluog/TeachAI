@@ -5,6 +5,7 @@ import elevenlabs
 import os
 from dotenv import load_dotenv
 import base64
+import requests  # Import requests to call Mailgun API
 
 # Load environment variables
 load_dotenv()
@@ -13,16 +14,16 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Configure API keys
+# Configure API keys for Gemini and ElevenLabs
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
+# ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
 
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-pro')
 
-# Configure ElevenLabs
-elevenlabs.set_api_key(ELEVENLABS_API_KEY)
+# # Configure ElevenLabs
+# elevenlabs.set_api_key(ELEVENLABS_API_KEY)
 
 def create_teaching_prompt(question):
     return f"""As an AI teaching assistant, provide a clear, concise, and helpful response to the following question. 
@@ -37,36 +38,76 @@ def generate_ai_response(question):
     response = model.generate_content(prompt)
     return response.text
 
-def generate_video_response(text):
-    # Generate audio using ElevenLabs
-    audio = elevenlabs.generate(
-        text=text,
-        voice="Bella",  # Using Bella voice as per documentation
-        model="eleven_monolingual_v1"
-    )
-    # Convert audio data to base64 for sending to frontend
-    audio_base64 = base64.b64encode(audio).decode('utf-8')
-    return audio_base64
+# def generate_video_response(text):
+#     # Generate audio using ElevenLabs
+#     audio = elevenlabs.generate(
+#         text=text,
+#         voice="Bella",  # Using Bella voice as per documentation
+#         model="eleven_monolingual_v1"
+#     )
+#     # Convert audio data to base64 for sending to frontend
+#     audio_base64 = base64.b64encode(audio).decode('utf-8')
+#     return audio_base64
 
-@app.route('/api/feedback', methods=['POST'])
-def feedback():
+# @app.route('/api/feedback', methods=['POST'])
+# def feedback():
+#     try:
+#         data = request.json
+#         question = data.get('question')
+        
+#         if not question:
+#             return jsonify({'error': 'No question provided'}), 400
+
+#         # Generate AI response using Gemini
+#         ai_response = generate_ai_response(question)
+        
+#         # Generate video response using ElevenLabs
+#         video_response = generate_video_response(ai_response)
+        
+#         return jsonify({
+#             'response': ai_response,
+#             'video': video_response
+#         })
+
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+
+# New endpoint for sending emails using Mailgun
+@app.route('/api/send-email', methods=['POST'])
+def send_email():
     try:
         data = request.json
-        question = data.get('question')
-        
-        if not question:
-            return jsonify({'error': 'No question provided'}), 400
+        recipient = data.get('recipient')
+        subject = data.get('subject')
+        message = data.get('message')
 
-        # Generate AI response using Gemini
-        ai_response = generate_ai_response(question)
-        
-        # Generate video response using ElevenLabs
-        video_response = generate_video_response(ai_response)
-        
-        return jsonify({
-            'response': ai_response,
-            'video': video_response
-        })
+        if not all([recipient, subject, message]):
+            return jsonify({'error': 'Missing required email parameters'}), 400
+
+        # Get Mailgun configuration from environment variables
+        MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY')
+        MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN')
+        sender_email = os.getenv('SENDER_EMAIL')
+
+        if not MAILGUN_API_KEY or not MAILGUN_DOMAIN or not sender_email:
+            return jsonify({'error': 'Mailgun configuration is missing'}), 500
+
+        # Send email via Mailgun
+        response = requests.post(
+            f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
+            auth=("api", MAILGUN_API_KEY),
+            data={
+                "from": sender_email,
+                "to": [recipient],
+                "subject": subject,
+                "text": message,
+            },
+        )
+
+        if response.status_code == 200:
+            return jsonify({'message': 'Email sent successfully!'}), 200
+        else:
+            return jsonify({'error': 'Failed to send email.', 'details': response.text}), response.status_code
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
