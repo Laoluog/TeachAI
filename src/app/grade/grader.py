@@ -190,13 +190,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error: {e}")
 
-if __name__ == "__main__":
-    sample_qa_pairs = [("1", "2x3=6"), ("2", "1+2=3")]
-    sample_answer_key = {
-        "1": "2 times 3 equals 8",
-        "2": "1 plus 2 equals 3"
-    }
-    
-    results, final_score = grade_with_gpt(sample_qa_pairs, sample_answer_key)
-    print("Grading Results:", results)
-    print("Final Score:", final_score, "%")
