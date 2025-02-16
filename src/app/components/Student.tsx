@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import styles from '../styles/Student.module.css';
+import { useRouter } from 'next/navigation';
 
 interface Question {
   id: number;
@@ -27,7 +28,7 @@ export default function Student({ questions, setQuestions }: StudentProps) {
   const [subject, setSubject] = useState('Computer Science');
   const [teacher, setTeacher] = useState('Dr. Smith');
   const audioRef = useRef<HTMLAudioElement>(null);
-  const typingSpeed = 30; // ms per character
+  const typingSpeed = 50; // ms per character
 
   // Cleanup function for blob URLs
   useEffect(() => {
@@ -65,6 +66,13 @@ export default function Student({ questions, setQuestions }: StudentProps) {
     setIsPlaying(false);
 
     try {
+      // Check if server is available first
+      try {
+        await fetch('http://127.0.0.1:5000/health', { method: 'GET' });
+      } catch (error) {
+        throw new Error('Unable to connect to the server. Please make sure the backend server is running.');
+      }
+
       const response = await fetch('http://127.0.0.1:5000/feedback', {
         method: 'POST',
         headers: {
@@ -73,61 +81,87 @@ export default function Student({ questions, setQuestions }: StudentProps) {
         body: JSON.stringify({ question }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
       
-      if (!data.response || !data.audio) {
-        throw new Error('Invalid response format from server');
+      if (!response.ok) {
+        console.error('Server error:', data.error || 'Unknown error');
+        setAiResponse(`I apologize, but I encountered an error: ${data.error || 'Unknown error'}. Please try again.`);
+        return;
       }
       
-      setAiResponse(data.response);
-      typeResponse(data.response);
+      // Always set the response if available
+      if (data.response) {
+        setAiResponse(data.response);
+        typeResponse(data.response);
+      }
 
+      // Update subject and teacher if available
       if (data.subject) setSubject(data.subject);
       if (data.teacher) setTeacher(data.teacher);
 
-      const audioData = atob(data.audio);
-      const audioArray = new Uint8Array(audioData.length);
-      for (let i = 0; i < audioData.length; i++) {
-        audioArray[i] = audioData.charCodeAt(i);
-      }
-      const audioBlob = new Blob([audioArray], { type: 'audio/mp3' });
-      const url = URL.createObjectURL(audioBlob);
-      
-      setAudioUrl(url);
-      if (audioRef.current) {
-        audioRef.current.src = url;
-        audioRef.current.play();
+      // Handle audio if available
+      if (data.audio) {
+        try {
+          const audioData = atob(data.audio);
+          const audioArray = new Uint8Array(audioData.length);
+          for (let i = 0; i < audioData.length; i++) {
+            audioArray[i] = audioData.charCodeAt(i);
+          }
+          const audioBlob = new Blob([audioArray], { type: 'audio/mp3' });
+          const url = URL.createObjectURL(audioBlob);
+          setAudioUrl(url);
+          
+          // Play the audio
+          if (audioRef.current) {
+            audioRef.current.src = url;
+            audioRef.current.play();
+          }
+        } catch (audioError) {
+          console.error('Error processing audio:', audioError);
+          // Continue without audio if there's an error
+        }
       }
 
       setQuestion('');
     } catch (error) {
       console.error('Error submitting question:', error);
-      setAiResponse(error instanceof Error ? error.message : 'An error occurred while processing your request.');
+      setAiResponse('I apologize, but I encountered an error while processing your request. Please try again in a moment.');
     } finally {
       setIsLoading(false);
+      setQuestion(''); // Clear the input field regardless of success/failure
     }
   };
 
   const typeResponse = (text: string) => {
-    let currentIndex = 0;
+    if (!text) return;
+    
+    let displayText = '';
     setDisplayedResponse('');
     
+    let currentChar = 0;
+    const chars = text.split('');
+    
     const typingInterval = setInterval(() => {
-      if (currentIndex < text.length) {
-        setDisplayedResponse(prev => prev + text[currentIndex]);
-        currentIndex++;
+      if (currentChar < chars.length) {
+        displayText += chars[currentChar];
+        setDisplayedResponse(displayText);
+        currentChar++;
       } else {
         clearInterval(typingInterval);
       }
     }, typingSpeed);
   };
 
+  const router = useRouter();
+
   return (
     <div className={styles.container}>
+      <button 
+        className={styles.backButton}
+        onClick={() => router.back()}
+      >
+        ← Back
+      </button>
       <div className={styles.classInfo}>
         <span>Subject: {subject}</span>
         <span>Teacher: {teacher}</span>

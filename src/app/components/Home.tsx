@@ -1,5 +1,7 @@
+'use client';
+
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import styles from '../styles/Home.module.css';
 
 interface HomeProps {
@@ -8,32 +10,34 @@ interface HomeProps {
 }
 
 const Home: React.FC<HomeProps> = ({ userRole, setUserRole }) => {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const handleRoleSelect = (role: 'student' | 'teacher') => {
     setUserRole(role);
-    navigate(`/${role}`);
+    router.push(`/${role}`);
   };
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>Welcome to Teach.AI</h1>
-      <p className={styles.description}>
-        Choose your role to get started
-      </p>
-      <div className={styles.roleContainer}>
-        <button
-          className={`${styles.roleButton} ${userRole === 'student' ? styles.selected : ''}`}
-          onClick={() => handleRoleSelect('student')}
-        >
-          I am a Student
-        </button>
-        <button
-          className={`${styles.roleButton} ${userRole === 'teacher' ? styles.selected : ''}`}
-          onClick={() => handleRoleSelect('teacher')}
-        >
-          I am a Teacher
-        </button>
+      <div className={styles.content}>
+        <h1 className={styles.title}>Welcome to Teach.AI</h1>
+        <p className={styles.description}>
+          Experience the future of education with our AI-powered teaching assistant
+        </p>
+        <div className={styles.roleContainer}>
+          <button
+            className={`${styles.roleButton} ${userRole === 'student' ? styles.selected : ''}`}
+            onClick={() => handleRoleSelect('student')}
+          >
+            I am a Student
+          </button>
+          <button
+            className={`${styles.roleButton} ${userRole === 'teacher' ? styles.selected : ''}`}
+            onClick={() => handleRoleSelect('teacher')}
+          >
+            I am a Teacher
+          </button>
+        </div>
       </div>
     </div>
   );
