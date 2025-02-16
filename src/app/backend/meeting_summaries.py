@@ -1,4 +1,5 @@
 # We planned on coding this feature in but we didn't have enough time so we hard coded as a placeholder, but plan to implement the real thing soon. 
+# We've hard coded it here, but we actually just made a script that can handle this exact functionality - Check it out in the repository!
 
 EXAMPLE_MEETING_SUMMARY = """Intro to DSA Discussion
 
