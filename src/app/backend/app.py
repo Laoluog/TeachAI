@@ -13,6 +13,7 @@ import time
 import sqlite3
 from grade.grader import extract_and_parse, grade_with_gemini
 from grade.file_utils import extract_text, parse_answer_key, parse_rubric
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -445,54 +446,76 @@ def send_email():
 @app.route('/grade-input-file', methods=['POST'])
 def handle_grading():
     try:
-        # Check if file was uploaded
+        # Check if required files were uploaded
         if 'file' not in request.files:
-            return jsonify({'error': 'No file uploaded'}), 400
+            return jsonify({'error': 'No student file uploaded'}), 400
             
-        file = request.files['file']
-        assignmentName = request.form.get('assignmentName')
+        student_file = request.files['file']
+        assignment_name = request.form.get('assignmentName')
         comments = request.form.get('comments')
+        rubric_file = request.files.get('rubric')  # Optional rubric file
         
-        # Check if a file was actually selected
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
+        # Check if files were actually selected
+        if student_file.filename == '':
+            return jsonify({'error': 'No student file selected'}), 400
             
-        # Create a temporary file to save the upload
-        temp_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(temp_path)
+        # Create temporary files
+        student_temp_path = os.path.join(UPLOAD_FOLDER, 'student_' + student_file.filename)
+        student_file.save(student_temp_path)
         
         try:
-            # Extract Q&A pairs from the image
-            qa_pairs = extract_and_parse(temp_path)
+            # Extract Q&A pairs from student work
+            qa_pairs = extract_and_parse(student_temp_path)
             
-            # For now, using a simple answer key - you'll want to modify this
-            answer_key = {
-                "1": "Sample answer 1",
-                "2": "Sample answer 2"
-                # Add more answers as needed
-            }
+            # Process rubric if provided
+            rubric_prompt = ""
+            if rubric_file and rubric_file.filename != '':
+                rubric_temp_path = os.path.join(UPLOAD_FOLDER, 'rubric_' + rubric_file.filename)
+                rubric_file.save(rubric_temp_path)
+                try:
+                    rubric_text = extract_text(rubric_temp_path)
+                    rubric_prompt = parse_rubric(rubric_text)
+                    os.remove(rubric_temp_path)
+                except Exception as rubric_error:
+                    print(f"Warning: Failed to process rubric: {rubric_error}")
+
+            # For now, using a sample answer key - you'll want to modify this
+            # TODO: Add answer key file upload in frontend and process it here
+            answer_key_text = """
+            1: Sample answer 1
+            2: Sample answer 2
+            """
+            answer_key = parse_answer_key(answer_key_text)
             
-            # Grade the answers
-            grading_results = grade_with_gemini(qa_pairs, answer_key)
+            # Grade the answers using the rubric if provided
+            grading_results = grade_with_gemini(qa_pairs, answer_key, rubric_prompt)
             
-            # Clean up the temporary file
-            os.remove(temp_path)
-            
-            return jsonify({
+            # Enhance results with assignment metadata
+            enhanced_results = {
                 'success': True,
                 'results': grading_results,
-                'assignmentName': assignmentName,
-                'comments': comments
-            })
+                'metadata': {
+                    'assignmentName': assignment_name,
+                    'comments': comments,
+                    'hasRubric': bool(rubric_prompt),
+                    'submissionDate': datetime.now().isoformat(),
+                    'numberOfQuestions': len(qa_pairs)
+                }
+            }
             
-        except Exception as e:
-            # Clean up the temporary file if it exists
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            raise e
+            return jsonify(enhanced_results)
+            
+        finally:
+            # Clean up temporary files
+            if os.path.exists(student_temp_path):
+                os.remove(student_temp_path)
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': str(e),
+            'errorType': type(e).__name__
+        }), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
