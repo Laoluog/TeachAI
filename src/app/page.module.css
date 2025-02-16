@@ -24,25 +24,112 @@
   -webkit-text-fill-color: transparent;
 }
 
-.videoContainer {
+.classInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
   max-width: 800px;
-  aspect-ratio: 16 / 9;
+  padding: 1rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.classInfo span {
+  color: #4a5568;
+  font-size: 1.1rem;
+}
+
+.responseContainer {
+  width: 100%;
+  max-width: 800px;
+  min-height: 150px;
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.typingText {
+  color: #2d3748;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin: 0;
+  text-align: left;
+}
+
+.typingCursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background-color: #4a90e2;
+  margin-left: 2px;
+  animation: blink 1s infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.audioContainer {
+  width: 100%;
+  max-width: 800px;
+  height: 200px;
   background: white;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
 
-.video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  background: #f8f9fa;
+.speechIcon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #4a90e2, #805ad5);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.15s ease-in-out;
+}
+
+.speechIcon svg {
+  width: 40px;
+  height: 40px;
+  color: white;
+}
+
+.speechIcon.speaking {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .form {
+  color: black;
   width: 100%;
   max-width: 800px;
   display: flex;
