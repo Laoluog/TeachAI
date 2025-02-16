@@ -507,7 +507,7 @@ def handle_grading():
                     'numberOfQuestions': len(qa_pairs)
                 }
             }
-            
+            print(enhanced_results)
             return jsonify(enhanced_results)
             
         finally:

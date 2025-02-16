@@ -365,8 +365,32 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                 </button>
               </div>
             </form>
-            {/* Results display code remains the same */}
-          </div>
+            {console.log('showResults:', showResults)} {/* Debug log */}
+          {console.log('gradingResults:', gradingResults)} {/* Debug log */}
+          
+          {showResults && gradingResults && (
+            <div className={styles.gradingResults}>
+              <h3>Grading Results</h3>
+              <div className={styles.overallScore}>
+                <h4>Overall Score: {(gradingResults.average_score * 100).toFixed(2)}%</h4>
+              </div>
+              
+              <div className={styles.individualResults}>
+                {gradingResults.individual_results?.map((result: any, index: number) => (
+                  <div key={index} className={styles.resultCard}>
+                    <h4>Question {result.question}</h4>
+                    <div className={styles.resultContent}>
+                      <p><strong>Student Answer:</strong> {result.student_answer}</p>
+                      <p><strong>Correct Answer:</strong> {result.correct_answer}</p>
+                      <p><strong>Score:</strong> {(result.score * 100).toFixed(0)}%</p>
+                      <p><strong>Explanation:</strong> {result.explanation}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         )}
       </div>
     </div>
