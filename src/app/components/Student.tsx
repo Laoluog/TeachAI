@@ -4,13 +4,60 @@ import { useState, useRef, useEffect } from 'react';
 import styles from '../styles/Student.module.css';
 import { useRouter } from 'next/navigation';
 
+interface Language {
+  code: string;
+  name: string;
+  flag?: string;
+}
+
+const SUPPORTED_LANGUAGES: Language[] = [
+  { code: 'en-US', name: 'English (USA)' },
+  { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
+  { code: 'en-AU', name: 'English (Australia)', flag: '🇦🇺' },
+  { code: 'en-CA', name: 'English (Canada)', flag: '🇨🇦' },
+  { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
+  { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
+  { code: 'de', name: 'German', flag: '🇩🇪' },
+  { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
+  { code: 'fr-FR', name: 'French (France)', flag: '🇫🇷' },
+  { code: 'fr-CA', name: 'French (Canada)', flag: '🇨🇦' },
+  { code: 'ko', name: 'Korean', flag: '🇰🇷' },
+  { code: 'pt-BR', name: 'Portuguese (Brazil)', flag: '🇧🇷' },
+  { code: 'pt-PT', name: 'Portuguese (Portugal)', flag: '🇵🇹' },
+  { code: 'it', name: 'Italian', flag: '🇮🇹' },
+  { code: 'es-ES', name: 'Spanish (Spain)', flag: '🇪🇸' },
+  { code: 'es-MX', name: 'Spanish (Mexico)', flag: '🇲🇽' },
+  { code: 'id', name: 'Indonesian', flag: '🇮🇩' },
+  { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
+  { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
+  { code: 'fil', name: 'Filipino', flag: '🇵🇭' },
+  { code: 'pl', name: 'Polish', flag: '🇵🇱' },
+  { code: 'sv', name: 'Swedish', flag: '🇸🇪' },
+  { code: 'bg', name: 'Bulgarian', flag: '🇧🇬' },
+  { code: 'ro', name: 'Romanian', flag: '🇷🇴' },
+  { code: 'ar-SA', name: 'Arabic (Saudi Arabia)', flag: '🇸🇦' },
+  { code: 'ar-AE', name: 'Arabic (UAE)', flag: '🇦🇪' },
+  { code: 'cs', name: 'Czech', flag: '🇨🇿' },
+  { code: 'el', name: 'Greek', flag: '🇬🇷' },
+  { code: 'fi', name: 'Finnish', flag: '🇫🇮' },
+  { code: 'hr', name: 'Croatian', flag: '🇭🇷' },
+  { code: 'ms', name: 'Malay', flag: '🇲🇾' },
+  { code: 'sk', name: 'Slovak', flag: '🇸🇰' },
+  { code: 'da', name: 'Danish', flag: '🇩🇰' },
+  { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
+  { code: 'uk', name: 'Ukrainian', flag: '🇺🇦' },
+  { code: 'ru', name: 'Russian', flag: '🇷🇺' },
+];
+
 interface Question {
   id: number;
   question: string;
   response: string;
+  response_english?: string;
   timestamp: string;
   subject: string;
   teacher: string;
+  language?: string;
 }
 
 interface StudentProps {
@@ -27,6 +74,8 @@ export default function Student({ questions, setQuestions }: StudentProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [subject, setSubject] = useState('Computer Science');
   const [teacher, setTeacher] = useState('Dr. Smith');
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(SUPPORTED_LANGUAGES[0]);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const typingSpeed = 50; // ms per character
 
@@ -78,7 +127,10 @@ export default function Student({ questions, setQuestions }: StudentProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ 
+          question,
+          language: selectedLanguage.code
+        }),
       });
 
       const data = await response.json();
@@ -162,9 +214,39 @@ export default function Student({ questions, setQuestions }: StudentProps) {
       >
         ← Back
       </button>
-      <div className={styles.classInfo}>
-        <span>Subject: {subject}</span>
-        <span>Teacher: {teacher}</span>
+      <div className={styles.topBar}>
+        <div className={styles.classInfo}>
+          <span>Subject: {subject}</span>
+          <span>Teacher: {teacher}</span>
+        </div>
+        <div className={styles.languageSelector}>
+          <button
+            className={styles.languageButton}
+            onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+          >
+            {selectedLanguage.flag && (
+              <span className={styles.flag}>{selectedLanguage.flag}</span>
+            )}
+            {selectedLanguage.name}
+          </button>
+          {isLanguageDropdownOpen && (
+            <div className={styles.languageDropdown}>
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <div
+                  key={lang.code}
+                  className={styles.languageOption}
+                  onClick={() => {
+                    setSelectedLanguage(lang);
+                    setIsLanguageDropdownOpen(false);
+                  }}
+                >
+                  {lang.flag && <span className={styles.flag}>{lang.flag}</span>}
+                  {lang.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {aiResponse && (
@@ -176,28 +258,7 @@ export default function Student({ questions, setQuestions }: StudentProps) {
         </div>
       )}
 
-      <div className={styles.audioContainer}>
-        <div className={`${styles.speechIcon} ${isPlaying ? styles.speaking : ''}`}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-            />
-          </svg>
-        </div>
-        <audio
-          ref={audioRef}
-          controls
-          style={{ display: 'none' }}
-        />
-      </div>
+
 
       <form onSubmit={handleSubmit} className={styles.form}>
         <textarea
