@@ -354,7 +354,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                       <div className={styles.resultContent}>
                         <p><strong>Student Answer:</strong> {result.student_answer}</p>
                         <p><strong>Correct Answer:</strong> {result.correct_answer}</p>
-                        <p><strong>Score:</strong> {(result.score * 100).toFixed(0)}%</p>
+                        <p><strong>Final Score:</strong> {(result.score * 100).toFixed(0)}%</p>
                         <p><strong>Feedback:</strong> {result.explanation}</p>
                       </div>
                     </div>
