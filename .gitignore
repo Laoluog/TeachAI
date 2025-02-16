@@ -1,1 +1,8 @@
 node_modules
+.next
+.env
+.env.example
+.vercel
+*.log
+.DS_Store
+uploads/
