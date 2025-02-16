@@ -154,6 +154,12 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         >
           Email Blast
         </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'grading' ? styles.active : ''}`}
+          onClick={() => setActiveTab('grading')}
+        >
+          Grading
+        </button>
       </nav>
 
       <div className={styles.content}>
@@ -259,6 +265,12 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                 Send to All Students
               </button>
             </form>
+          </div>
+        )}
+        {activeTab === 'grading' && (
+          <div className={styles.grading}>
+            <h2>Grading</h2>
+            {/* Add your grading content here */}
           </div>
         )}
       </div>
