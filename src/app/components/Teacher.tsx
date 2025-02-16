@@ -322,7 +322,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         {activeTab === 'grading' && (
           <div className={styles.grading}>
             <h2>Grading</h2>
-            <form onSubmit={handleGrading} className={styles.emailForm}>
+            <form onSubmit={handleGrading} className={styles.emailForm} method="POST">
               <div className={styles.uploadSection}>
                 <div className={styles.fileInputGroup}>
                   <label>Student Assignment</label>

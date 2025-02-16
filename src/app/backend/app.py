@@ -14,6 +14,7 @@ import sqlite3
 from grade.grader import extract_and_parse, grade_with_gemini
 from grade.file_utils import extract_text, parse_answer_key, parse_rubric
 from datetime import datetime
+from PIL import Image
 
 # Load environment variables
 load_dotenv()
@@ -442,91 +443,93 @@ def send_email():
         error_response = jsonify({'error': str(e)})
         error_response.status_code = 500
         return error_response
-
+    
 @app.route('/grade-input-file', methods=['POST'])
 def handle_grading():
     student_temp_path = None
     try:
-        print("Starting grading process...")  # Debug log
-        
+        print("Starting grading process...")
+
         if 'file' not in request.files:
             return jsonify({'error': 'No student file uploaded'}), 400
-            
+
         student_file = request.files['file']
         assignment_name = request.form.get('assignmentName')
         comments = request.form.get('comments')
         rubric_file = request.files.get('rubric')
-        
-        print(f"Received files: student={student_file.filename}, rubric={rubric_file.filename if rubric_file else 'None'}")  # Debug log
-        
+
+        print(f"Received files: student={student_file.filename}, rubric={rubric_file.filename if rubric_file else 'None'}")
+
         if student_file.filename == '':
             return jsonify({'error': 'No student file selected'}), 400
-            
-        # Create temporary files
-        student_temp_path = os.path.join(UPLOAD_FOLDER, 'student_' + student_file.filename)
-        print(f"Saving student file to: {student_temp_path}")  # Debug log
-        student_file.save(student_temp_path)
-        
-        try:
-            print("Extracting Q&A pairs...")  # Debug log
-            qa_pairs = extract_and_parse(student_temp_path)
-            print(f"Extracted {len(qa_pairs)} Q&A pairs")  # Debug log
-            
-            rubric_prompt = ""
-            if rubric_file and rubric_file.filename != '':
-                print("Processing rubric...")  # Debug log
-                rubric_temp_path = os.path.join(UPLOAD_FOLDER, 'rubric_' + rubric_file.filename)
-                rubric_file.save(rubric_temp_path)
-                try:
-                    rubric_text = extract_text(rubric_temp_path)
-                    rubric_prompt = parse_rubric(rubric_text)
-                    os.remove(rubric_temp_path)
-                    print("Rubric processed successfully")  # Debug log
-                except Exception as rubric_error:
-                    print(f"Warning: Failed to process rubric: {rubric_error}")
 
-            print("Setting up answer key...")  # Debug log
-            answer_key_text = """
-            1: Sample answer 1
-            2: Sample answer 2
-            """
-            answer_key = parse_answer_key(answer_key_text)
-            
-            print("Starting grading...")  # Debug log
-            grading_results = grade_with_gemini(qa_pairs, answer_key, rubric_prompt)
-            print("Grading completed")  # Debug log
-            
-            enhanced_results = {
-                'success': True,
-                'results': grading_results,
-                'metadata': {
-                    'assignmentName': assignment_name,
-                    'comments': comments,
-                    'hasRubric': bool(rubric_prompt),
-                    'submissionDate': datetime.now().isoformat(),
-                    'numberOfQuestions': len(qa_pairs)
-                }
+        student_temp_path = os.path.join(UPLOAD_FOLDER, 'student_' + student_file.filename)
+        print(f"Saving student file to: {student_temp_path}")
+
+        student_file.save(student_temp_path)
+
+        print("Extracting Q&A pairs...")
+        with Image.open(student_temp_path) as img:
+            qa_pairs = extract_and_parse(student_temp_path)
+        print(f"Extracted {len(qa_pairs)} Q&A pairs")
+
+        rubric_prompt = ""
+        if rubric_file and rubric_file.filename != '':
+            print("Processing rubric...")
+            rubric_temp_path = os.path.join(UPLOAD_FOLDER, 'rubric_' + rubric_file.filename)
+            rubric_file.save(rubric_temp_path)
+            try:
+                rubric_text = extract_text(rubric_temp_path)
+                rubric_prompt = parse_rubric(rubric_text)
+                os.remove(rubric_temp_path)
+                print("Rubric processed successfully")
+            except Exception as rubric_error:
+                print(f"Warning: Failed to process rubric: {rubric_error}")
+
+        print("Setting up answer key...")
+        answer_key_text = """
+        1: Sample answer 1
+        2: Sample answer 2
+        """
+        answer_key = parse_answer_key(answer_key_text)
+
+        print("Starting grading...")
+        grading_results = grade_with_gemini(qa_pairs, answer_key, rubric_prompt)
+        print("Grading completed")
+
+        enhanced_results = {
+            'success': True,
+            'results': grading_results,
+            'metadata': {
+                'assignmentName': assignment_name,
+                'comments': comments,
+                'hasRubric': bool(rubric_prompt),
+                'submissionDate': datetime.now().isoformat(),
+                'numberOfQuestions': len(qa_pairs)
             }
-            print(enhanced_results)
-            return jsonify(enhanced_results)
-            
-        finally:
-            if student_temp_path and os.path.exists(student_temp_path):
-                print(f"Cleaning up: removing {student_temp_path}")  # Debug log
-                os.remove(student_temp_path)
-            
+        }
+
+        return jsonify(enhanced_results)
+
     except Exception as e:
         import traceback
         print(f"Error in handle_grading: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")  # Detailed error trace
-        # Clean up if error occurred
-        if student_temp_path and os.path.exists(student_temp_path):
-            os.remove(student_temp_path)
+        print(f"Traceback: {traceback.format_exc()}")
         return jsonify({
             'error': str(e),
             'errorType': type(e).__name__,
             'traceback': traceback.format_exc()
         }), 500
+
+    finally:
+        try:
+            if student_temp_path and os.path.exists(student_temp_path):
+                os.close(os.open(student_temp_path, os.O_RDONLY))
+                os.remove(student_temp_path)
+                print(f"Successfully removed {student_temp_path}")
+        except Exception as cleanup_error:
+            print(f"Warning: Could not clean up temp file: {cleanup_error}")
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
