@@ -2,3 +2,12 @@ node_modules
 venv
 .next
 .next/trace
+.next
+.env
+.env.local
+.env*.local
+.vercel
+*.log
+.DS_Store
+uploads/
+.env.example
