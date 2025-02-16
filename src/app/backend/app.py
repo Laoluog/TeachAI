@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, Response, send_file, redirect
+import requests
 from flask_cors import CORS
 from openai import OpenAI
 from elevenlabs.client import ElevenLabs
