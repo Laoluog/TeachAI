@@ -194,6 +194,132 @@
   line-height: 1.6;
 }
 
+/* Settings Styles */
+.settings {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+.settingsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.settingSection {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.settingSection h3 {
+  color: #4f46e5;
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.settingItem {
+  margin-bottom: 1.5rem;
+}
+
+.settingItem label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.settingInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.settingInput:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+.saveButton {
+  background: #4f46e5;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  align-self: flex-end;
+}
+
+.saveButton:hover {
+  background: #4338ca;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(67, 56, 202, 0.3);
+}
+
+/* Grading Styles */
+.grading {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+.gradingResults {
+  margin-top: 2rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.overallScore {
+  background: #4f46e5;
+  color: white;
+  padding: 1.5rem;
+  border-radius: 15px;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.overallScore h4 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.resultCard {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.resultCard h4 {
+  color: #4f46e5;
+  margin-bottom: 1rem;
+}
+
+.resultContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.resultContent p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.resultContent strong {
+  color: #4b5563;
+}
+
 /* File Upload Styles */
 .uploadSection {
   margin-bottom: 2rem;

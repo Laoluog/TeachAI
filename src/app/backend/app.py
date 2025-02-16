@@ -776,7 +776,7 @@ def get_relevant_context(question, k=3):
         print(f'Error getting context: {e}')
         return []
 
-@app.route('/upload', methods=['POST', 'OPTIONS'])
+@app.route('/document/upload', methods=['POST', 'OPTIONS'])
 @cross_origin(supports_credentials=True)
 def upload_file():
     try:
@@ -791,50 +791,64 @@ def upload_file():
             
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
+            
+            # Ensure upload directory exists
+            if not os.path.exists(UPLOAD_FOLDER):
+                os.makedirs(UPLOAD_FOLDER)
+                
             file_path = os.path.join(UPLOAD_FOLDER, filename)
             file.save(file_path)
             
-            with DatabaseConnection() as conn:
-                c = conn.cursor()
-                c.execute('''
-                    INSERT INTO files (filename, description, file_path, file_type)
-                    VALUES (?, ?, ?, ?)
-                ''', (filename, description, file_path, os.path.splitext(filename)[1][1:]))
-                file_id = c.lastrowid
-            
-            # Process document and create vector store
-            success, error = process_document(file_path, file_id)
-            if not success:
-                return jsonify({'error': f'Error processing document: {error}'}), 500
-            
-            return jsonify({
-                'message': 'File uploaded and processed successfully',
-                'file_id': file_id,
-                'filename': filename
-            }), 200
+            try:
+                with DatabaseConnection() as conn:
+                    c = conn.cursor()
+                    c.execute('''
+                        INSERT INTO files (filename, description, file_path, file_type)
+                        VALUES (?, ?, ?, ?)
+                    ''', (filename, description, file_path, os.path.splitext(filename)[1][1:]))
+                    file_id = c.lastrowid
+                
+                # Process document and create vector store
+                success, error = process_document(file_path, file_id)
+                if not success:
+                    return jsonify({'error': f'Error processing document: {error}'}), 500
+                
+                return jsonify({
+                    'message': 'File uploaded and processed successfully',
+                    'file_id': file_id,
+                    'filename': filename
+                }), 200
+            except sqlite3.Error as e:
+                print(f'Database error during file upload: {e}')
+                return jsonify({'error': f'Database error: {str(e)}'}), 500
             
         return jsonify({'error': 'File type not allowed'}), 400
         
     except Exception as e:
+        print(f'Error in upload_file: {e}')
         return jsonify({'error': str(e)}), 500
 
-@app.route('/files', methods=['GET'])
+@app.route('/document/files', methods=['GET'])
+@cross_origin(supports_credentials=True)
 def get_files():
     try:
-        conn = sqlite3.connect('teachai.db')
-        c = conn.cursor()
-        c.execute('SELECT id, filename, description, upload_date FROM files ORDER BY upload_date DESC')
-        files = c.fetchall()
-        conn.close()
-        
-        return jsonify([{
-            'id': f[0],
-            'name': f[1],
-            'description': f[2],
-            'uploadDate': f[3]
-        } for f in files])
-        
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            c.execute('SELECT id, filename, description, upload_date, file_type FROM files ORDER BY upload_date DESC')
+            files = c.fetchall()
+            
+            return jsonify({
+                'files': [{
+                    'id': f[0],
+                    'name': f[1],
+                    'description': f[2],
+                    'uploadDate': f[3],
+                    'fileType': f[4]
+                } for f in files]
+            })
+            
     except Exception as e:
+        print(f'Error in get_files: {e}')
         return jsonify({'error': str(e)}), 500
 
 # Chat history table initialization

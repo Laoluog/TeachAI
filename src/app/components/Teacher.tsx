@@ -390,6 +390,18 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         >
           Email Blast
         </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'grading' ? styles.active : ''}`}
+          onClick={() => setActiveTab('grading')}
+        >
+          Grading
+        </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'settings' ? styles.active : ''}`}
+          onClick={() => setActiveTab('settings')}
+        >
+          Settings
+        </button>
       </nav>
 
       <div className={styles.content}>
@@ -608,32 +620,75 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                 </button>
               </div>
             </form>
-            {console.log('showResults:', showResults)} {/* Debug log */}
-          {console.log('gradingResults:', gradingResults)} {/* Debug log */}
-          
-          {showResults && gradingResults && (
-            <div className={styles.gradingResults}>
-              <h3>Grading Results</h3>
-              <div className={styles.overallScore}>
-                <h4>Overall Score: {(gradingResults.average_score * 100).toFixed(2)}%</h4>
+            
+            {showResults && gradingResults && (
+              <div className={styles.gradingResults}>
+                <h3>Grading Results</h3>
+                <div className={styles.overallScore}>
+                  <h4>Overall Score: {(gradingResults.average_score * 100).toFixed(2)}%</h4>
+                </div>
+                
+                <div className={styles.individualResults}>
+                  {gradingResults.individual_results?.map((result: any, index: number) => (
+                    <div key={index} className={styles.resultCard}>
+                      <h4>Question {result.question}</h4>
+                      <div className={styles.resultContent}>
+                        <p><strong>Student Answer:</strong> {result.student_answer}</p>
+                        <p><strong>Correct Answer:</strong> {result.correct_answer}</p>
+                        <p><strong>Score:</strong> {(result.score * 100).toFixed(0)}%</p>
+                        <p><strong>Explanation:</strong> {result.explanation}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className={styles.settings}>
+            <h2>Settings</h2>
+            <div className={styles.settingsContent}>
+              <div className={styles.settingSection}>
+                <h3>API Configuration</h3>
+                <div className={styles.settingItem}>
+                  <label>OpenAI API Key</label>
+                  <input type="password" placeholder="Enter OpenAI API Key" className={styles.settingInput} />
+                </div>
+                <div className={styles.settingItem}>
+                  <label>ElevenLabs API Key</label>
+                  <input type="password" placeholder="Enter ElevenLabs API Key" className={styles.settingInput} />
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Google API Key</label>
+                  <input type="password" placeholder="Enter Google API Key" className={styles.settingInput} />
+                </div>
               </div>
               
-              <div className={styles.individualResults}>
-                {gradingResults.individual_results?.map((result: any, index: number) => (
-                  <div key={index} className={styles.resultCard}>
-                    <h4>Question {result.question}</h4>
-                    <div className={styles.resultContent}>
-                      <p><strong>Student Answer:</strong> {result.student_answer}</p>
-                      <p><strong>Correct Answer:</strong> {result.correct_answer}</p>
-                      <p><strong>Score:</strong> {(result.score * 100).toFixed(0)}%</p>
-                      <p><strong>Explanation:</strong> {result.explanation}</p>
-                    </div>
-                  </div>
-                ))}
+              <div className={styles.settingSection}>
+                <h3>Email Settings</h3>
+                <div className={styles.settingItem}>
+                  <label>SMTP Server</label>
+                  <input type="text" placeholder="Enter SMTP Server" className={styles.settingInput} />
+                </div>
+                <div className={styles.settingItem}>
+                  <label>SMTP Port</label>
+                  <input type="number" placeholder="Enter SMTP Port" className={styles.settingInput} />
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Email Username</label>
+                  <input type="email" placeholder="Enter Email Username" className={styles.settingInput} />
+                </div>
+                <div className={styles.settingItem}>
+                  <label>Email Password</label>
+                  <input type="password" placeholder="Enter Email Password" className={styles.settingInput} />
+                </div>
               </div>
+
+              <button className={styles.saveButton}>Save Settings</button>
             </div>
-          )}
-        </div>
+          </div>
         )}
       </div>
     </div>
