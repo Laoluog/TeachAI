@@ -14,7 +14,7 @@ from document_processor import document_bp
 load_dotenv()
 
 # Initialize OpenAI client
-openai_client = OpenAI(api_key=os.getenv('OPENAI'))
+openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Initialize ElevenLabs client
 elevenlabs_api_key = os.getenv('ELEVENLABS_API_KEY')
@@ -34,8 +34,16 @@ def debug_tts_status():
 
 debug_tts_status()
 
-# Database configuration
-DATABASE_NAME = 'teachai.db'
+# Configuration
+DATABASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database')
+DATABASE_PATH = os.path.join(DATABASE_DIR, 'teachai.db')
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+
+# Ensure required directories exist
+for directory in [DATABASE_DIR, UPLOAD_FOLDER]:
+    if not os.path.exists(directory):
+        print(f"Creating directory: {directory}")
+        os.makedirs(directory)
 
 # Database connection context manager
 class DatabaseConnection:
@@ -43,35 +51,151 @@ class DatabaseConnection:
         self.conn = None
 
     def __enter__(self):
-        self.conn = sqlite3.connect(DATABASE_NAME)
+        print(f"Connecting to database: {DATABASE_PATH}")
+        self.conn = sqlite3.connect(DATABASE_PATH)
         return self.conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.conn:
             if exc_type is None:
                 self.conn.commit()
+                print("Database changes committed")
             else:
                 self.conn.rollback()
+                print(f"Database changes rolled back due to: {exc_type}")
             self.conn.close()
+            print("Database connection closed")
+
+def verify_db_tables():
+    """Verify that all required database tables exist and have the correct schema."""
+    print("Verifying database tables...")
+    with DatabaseConnection() as conn:
+        c = conn.cursor()
+        
+        # Check if tables exist
+        c.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = {row[0] for row in c.fetchall()}
+        print(f"Existing tables: {tables}")
+        
+        required_tables = {'files', 'document_chunks'}
+        missing_tables = required_tables - tables
+        
+        if missing_tables:
+            print(f"Missing tables: {missing_tables}")
+            return False
+            
+        # Verify table schemas
+        try:
+            c.execute("PRAGMA table_info(files)")
+            files_columns = {row[1] for row in c.fetchall()}
+            required_files_columns = {'id', 'filename', 'description', 'file_path', 'file_type', 'vector_store_path', 'upload_date'}
+            
+            c.execute("PRAGMA table_info(document_chunks)")
+            chunks_columns = {row[1] for row in c.fetchall()}
+            required_chunks_columns = {'id', 'file_id', 'chunk_text', 'chunk_index'}
+            
+            print(f"Files table columns: {files_columns}")
+            print(f"Document chunks table columns: {chunks_columns}")
+            
+            if not (required_files_columns <= files_columns and required_chunks_columns <= chunks_columns):
+                print("Schema verification failed")
+                return False
+                
+            return True
+        except Exception as e:
+            print(f"Error verifying schema: {e}")
+            return False
+
+def init_db():
+    """Initialize database tables if they don't exist."""
+    print("Initializing database...")
+    try:
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            
+            # Create files table
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS files (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT NOT NULL,
+                    description TEXT,
+                    file_path TEXT NOT NULL,
+                    file_type TEXT,
+                    vector_store_path TEXT,
+                    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            print("Files table created/verified")
+            
+            # Create document_chunks table
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS document_chunks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    file_id INTEGER,
+                    chunk_text TEXT NOT NULL,
+                    chunk_index INTEGER,
+                    FOREIGN KEY (file_id) REFERENCES files (id)
+                )
+            ''')
+            print("Document chunks table created/verified")
+            
+            # Create chat_history table if it doesn't exist yet
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS chat_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    question TEXT NOT NULL,
+                    answer TEXT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            print("Chat history table created/verified")
+            
+            # Verify tables were created correctly
+            if not verify_db_tables():
+                print("Database verification failed!")
+                raise Exception("Failed to verify database tables")
+            
+            print("Database initialization completed successfully")
+            return True
+            
+    except sqlite3.Error as e:
+        print(f"SQLite error during database initialization: {e}")
+        raise Exception(f"Database initialization failed: {e}") from e
+    except Exception as e:
+        print(f"Unexpected error during database initialization: {e}")
+        raise Exception(f"Database initialization failed: {e}") from e
+
+# Initialize database
+init_db()
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Configure CORS
 app.config['CORS_HEADERS'] = 'Content-Type'
+app.config['CORS_ORIGINS'] = ['http://localhost:3000', 'http://127.0.0.1:3000']
 cors = CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Accept"],
+        "origins": app.config['CORS_ORIGINS'],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Accept", "Authorization"],
         "expose_headers": ["Content-Type", "Accept"],
         "supports_credentials": True,
         "send_wildcard": False
     }
 })
 
+# Configure CORS
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"]
+    }
+})
+
 # Register blueprints
-app.register_blueprint(document_bp)
+app.register_blueprint(document_bp, url_prefix='/document')
 
 # Health check endpoint
 @app.route('/health', methods=['GET', 'OPTIONS'])
@@ -151,7 +275,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 # Configure API keys
 load_dotenv()
-OPENAI_API_KEY = os.getenv('OPENAI')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY')
 
 if not OPENAI_API_KEY:

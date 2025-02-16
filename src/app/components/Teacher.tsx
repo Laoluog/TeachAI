@@ -15,13 +15,24 @@ interface Question {
   language?: string;
 }
 
+interface FileResponse {
+  id: number;
+  name: string;
+  filename?: string;
+  description: string;
+  uploadDate?: string;
+  upload_date?: string;
+  fileType?: string;
+  file_type?: string;
+}
+
 interface File {
   id: number;
   name: string;
   description: string;
   uploadDate: string;
-  fileType?: string;
-  status?: 'processing' | 'ready' | 'error';
+  fileType: string;
+  status: 'processing' | 'ready' | 'error';
   error?: string;
 }
 
@@ -39,13 +50,14 @@ interface TeacherProps {
 export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [activeTab, setActiveTab] = useState('questions');
   const [files, setFiles] = useState<File[]>([]);
-  const [chatMessage, setChatMessage] = useState('');
+  const [currentMessage, setCurrentMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFileListLoading, setIsFileListLoading] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const router = useRouter();
 
   // Fetch questions, files, and chat history on component mount
   useEffect(() => {
@@ -55,18 +67,43 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   }, []);
 
   const fetchFiles = async () => {
+    setIsFileListLoading(true);
     try {
       const response = await fetch('http://127.0.0.1:5000/document/files', {
-        credentials: 'include',
-        mode: 'cors',
+        method: 'GET',
         headers: {
           'Accept': 'application/json'
         }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      setFiles(data);
+      console.log('Fetched files:', data);
+      
+      if (!Array.isArray(data.files)) {
+        console.error('Files data is not an array:', data);
+        setFiles([]);
+        return;
+      }
+      
+      const processedFiles: File[] = data.files.map((file: FileResponse) => ({
+        id: file.id,
+        name: file.name || file.filename || 'Unnamed file',
+        description: file.description || '',
+        uploadDate: file.uploadDate || file.upload_date || new Date().toISOString(),
+        fileType: file.fileType || file.file_type || 'unknown',
+        status: 'ready' as const
+      }));
+      
+      setFiles(processedFiles);
     } catch (error) {
       console.error('Error fetching files:', error);
+      setFiles([]);
+    } finally {
+      setIsFileListLoading(false);
     }
   };
 
@@ -86,7 +123,6 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const fetchQuestions = async () => {
     try {
       const response = await fetch('http://127.0.0.1:5000/questions', {
-        credentials: 'include',
         mode: 'cors',
         headers: {
           'Accept': 'application/json'
@@ -101,70 +137,86 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
 
     // Check file type
     const fileType = file.name.split('.').pop()?.toLowerCase();
     const allowedTypes = ['pdf', 'txt', 'doc', 'docx'];
+    
+    console.log('File type:', fileType);
     
     if (!fileType || !allowedTypes.includes(fileType)) {
       alert(`File type not supported. Please upload: ${allowedTypes.join(', ')}`);
       return;
     }
 
-    // Add file to list immediately with processing status
-    const tempFile = {
-      id: Date.now(), // Temporary ID
-      name: file.name,
-      description: uploadDescription,
-      uploadDate: new Date().toISOString(),
-      fileType,
-      status: 'processing' as const
-    };
-    setFiles(prev => [tempFile, ...prev]);
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('description', uploadDescription);
+    // Create temporary file object
+    let tempFile: File | null = null;
 
     try {
       setIsLoading(true);
+      
+      // Initialize temporary file with processing status
+      tempFile = {
+        id: Date.now(),
+        name: file.name,
+        description: uploadDescription,
+        uploadDate: new Date().toISOString(),
+        fileType,
+        status: 'processing'
+      };
+      
+      setFiles(prev => [tempFile!, ...prev]);
+
+      console.log('Starting file upload:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        description: uploadDescription
+      });
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('description', uploadDescription);
+      
       const response = await fetch('http://127.0.0.1:5000/document/upload', {
         method: 'POST',
         body: formData,
-        credentials: 'include',
-        mode: 'cors',
         headers: {
           'Accept': 'application/json'
         }
       });
       
-      const data = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
       
-      if (response.ok) {
-        setUploadDescription('');
-        // Refresh files list
-        fetchFiles();
-      } else {
-        // Update file status to error
+      const data = await response.json();
+      console.log('Upload successful:', data);
+      
+      setUploadDescription('');
+      // Remove processing file and fetch updated list
+      if (tempFile) {
+        setFiles(prev => prev.filter(f => f.id !== tempFile!.id));
+      }
+      await fetchFiles();
+      
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      // Update file status to error if tempFile exists
+      if (tempFile) {
         setFiles(prev => prev.map(f => 
-          f.id === tempFile.id ? {
+          f.id === tempFile!.id ? {
             ...f,
             status: 'error',
-            error: data.error || 'Upload failed'
+            error: error instanceof Error ? error.message : 'Network error'
           } : f
         ));
       }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      // Update file status to error
-      setFiles(prev => prev.map(f => 
-        f.id === tempFile.id ? {
-          ...f,
-          status: 'error',
-          error: 'Network error'
-        } : f
-      ));
     } finally {
       setIsLoading(false);
     }
@@ -172,26 +224,48 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatMessage.trim()) return;
+    if (!currentMessage.trim()) return;
 
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: currentMessage,
+      timestamp: new Date().toISOString()
+    };
+
+    setChatHistory(prev => [...prev, userMessage]);
+    setCurrentMessage('');
     setIsLoading(true);
+
     try {
       const response = await fetch('http://127.0.0.1:5000/teacher/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: chatMessage }),
+        body: JSON.stringify({ message: currentMessage }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       
-      if (data.history) {
-        setChatHistory(data.history);
-      }
-      
-      setChatMessage('');
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: data.response || 'Sorry, I could not process your request.',
+        timestamp: new Date().toISOString()
+      };
+
+      setChatHistory(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending chat message:', error);
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: 'Sorry, there was an error processing your message. Please try again.',
+        timestamp: new Date().toISOString()
+      };
+      setChatHistory(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -231,8 +305,6 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
     }
   };
 
-  const router = useRouter();
-
   return (
     <div className={styles.container}>
       <button 
@@ -266,6 +338,12 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         >
           Email Blast
         </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'settings' ? styles.active : ''}`}
+          onClick={() => setActiveTab('email')}
+        >
+          Settings
+        </button>
       </nav>
 
       <div className={styles.content}>
@@ -298,27 +376,62 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           <div className={styles.files}>
             <h2 className={styles.sectionHeader}>File Management</h2>
             <div className={styles.uploadSection}>
-              <input
-                type="file"
-                onChange={handleFileUpload}
-                className={styles.fileInput}
-              />
               <textarea
                 value={uploadDescription}
                 onChange={(e) => setUploadDescription(e.target.value)}
                 placeholder="File description..."
                 className={styles.descriptionInput}
+                disabled={isLoading}
               />
-              <button className={styles.uploadButton}>Upload</button>
+              <div className={styles.fileInputWrapper}>
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  accept=".txt,.pdf,.doc,.docx"
+                  className={styles.fileInput}
+                  disabled={isLoading}
+                />
+                {isLoading && (
+                  <div className={styles.loadingOverlay}>
+                    <span>Uploading and processing document...</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className={styles.fileList}>
-              {files.map((file) => (
-                <div key={file.id} className={styles.fileCard}>
-                  <h3>{file.name}</h3>
-                  <p>{file.description}</p>
-                  <span>{new Date(file.uploadDate).toLocaleString()}</span>
+              {isFileListLoading ? (
+                <div className={styles.loadingContainer}>
+                  <div className={styles.loadingSpinner} />
+                  <span>Loading files...</span>
                 </div>
-              ))}
+              ) : files.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <span>No files uploaded yet</span>
+                </div>
+              ) : (
+                files.map((file) => (
+                  <div key={file.id} className={`${styles.fileCard} ${file.status === 'error' ? styles.error : ''}`}>
+                    <div className={styles.fileHeader}>
+                      <h3>{file.name}</h3>
+                      <span className={`${styles.fileStatus} ${styles[file.status]}`}>
+                        {file.status === 'processing' ? 'Processing...' :
+                         file.status === 'error' ? 'Error' :
+                         'Ready'}
+                      </span>
+                    </div>
+                    <p className={styles.fileDescription}>{file.description}</p>
+                    {file.error && (
+                      <p className={styles.errorMessage}>{file.error}</p>
+                    )}
+                    <div className={styles.fileFooter}>
+                      <span className={styles.fileType}>{file.fileType}</span>
+                      <span className={styles.uploadDate}>
+                        {new Date(file.uploadDate).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -353,8 +466,8 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
             </div>
             <form onSubmit={handleChatSubmit} className={styles.chatForm}>
               <textarea
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
                 placeholder="Ask about student performance, common questions, etc..."
                 className={styles.chatInput}
                 disabled={isLoading}
@@ -362,7 +475,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
               <button
                 type="submit"
                 className={styles.chatButton}
-                disabled={isLoading || !chatMessage.trim()}
+                disabled={isLoading || !currentMessage.trim()}
               >
                 {isLoading ? 'Sending...' : 'Send'}
               </button>
@@ -373,29 +486,6 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         {activeTab === 'email' && (
           <div className={styles.email}>
             <h2 className={styles.sectionHeader}>Email Blast</h2>
-            <form onSubmit={handleEmailBlast} className={styles.emailForm}>
-              <input
-                type="text"
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-                placeholder="Email subject"
-                className={styles.emailSubject}
-              />
-              <textarea
-                value={emailBody}
-                onChange={(e) => setEmailBody(e.target.value)}
-                placeholder="Email content..."
-                className={styles.emailBody}
-              />
-              <button type="submit" className={styles.emailButton}>
-                Send to All Students
-              </button>
-            </form>
-          </div>
-        )}
-        {activeTab === 'email' && (
-          <div className={styles.email}>
-            <h2 className={styles.sectionHeader}>Settings</h2>
             <form onSubmit={handleEmailBlast} className={styles.emailForm}>
               <input
                 type="text"
