@@ -2,7 +2,7 @@ import sqlite3
 import os
 from contextlib import contextmanager
 
-DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'teachai.db')
+DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'database', 'teachai.db')
 
 @contextmanager
 def get_db_connection():
@@ -58,15 +58,21 @@ def init_db():
             )
         ''')
         
-        # Create chat_history table
+        # Create questions table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS chat_history (
+            CREATE TABLE IF NOT EXISTS questions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 question TEXT NOT NULL,
-                answer TEXT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                response TEXT NOT NULL,
+                response_english TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                subject TEXT,
+                teacher TEXT,
+                language TEXT DEFAULT 'en'
             )
         ''')
+        
+        # Note: chat_history table already created above
         
         conn.commit()
         print("Database tables created successfully")

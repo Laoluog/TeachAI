@@ -15,6 +15,7 @@ from grade.file_utils import extract_text, parse_answer_key, parse_rubric
 from datetime import datetime
 from PIL import Image
 from document_processor import document_bp
+from database import init_db, verify_tables_exist, get_db_connection
 
 # Load environment variables
 load_dotenv()
@@ -116,7 +117,7 @@ def init_db():
     """Initialize database tables if they don't exist."""
     print("Initializing database...")
     try:
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             
             # Create files table
@@ -171,10 +172,10 @@ def init_db():
         print(f"Unexpected error during database initialization: {e}")
         raise Exception(f"Database initialization failed: {e}") from e
 
-from database import init_db, verify_tables_exist
-
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
+
 
 # Initialize database
 try:
@@ -187,21 +188,17 @@ except Exception as e:
     print(f"Error initializing database: {e}")
 
 # Configure CORS
-app.config['CORS_HEADERS'] = 'Content-Type'
-app.config['CORS_ORIGINS'] = ['http://localhost:3000', 'http://127.0.0.1:3000']
-cors = CORS(app, resources={
-    r"/*": {
-        "origins": app.config['CORS_ORIGINS'],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Accept", "Authorization"],
-        "expose_headers": ["Content-Type", "Accept"],
+# Configure CORS to be completely open while supporting credentials
+CORS(app, 
+    resources={r"/*": {
+        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        "allow_headers": ["Content-Type", "Accept", "Authorization", "X-Requested-With", "x-csrf-token"],
+        "expose_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True,
-        "send_wildcard": False,
-        "max_age": 3600
-    }
-})
-
-
+        "max_age": 86400
+    }},
+    supports_credentials=True)
 
 # Register blueprints
 app.register_blueprint(document_bp, url_prefix='/document')
@@ -334,7 +331,17 @@ def generate_ai_response(question):
     if context_text:
         messages.append({
             "role": "system",
-            "content": f"Context from relevant documents:\n{context_text}"
+            "content": (
+                f"Context from relevant documents:\n{context_text}"
+                f"For reference, the user is working on a Computer Science study guide with the following 5 questions (Q) and answers."
+                """
+                Q: What is recursion? Answer: Recursion is a programming technique where a function calls itself to solve a problem by breaking it down into smaller, more manageable subproblems. 
+                Q: Define a linked list. Answer: A linked list is a linear data structure where elements, called nodes, are stored in sequence, with each node containing data and a reference (or link) to the next node in the sequence.
+                Q: What is the purpose of a base case in recursion? Answer: The base case in recursion provides a condition under which the recursive function stops calling itself, preventing infinite loops and ensuring that the problem is eventually solved.
+                Q: Explain the difference between a stack and a queue. Answer: A stack is a data structure that follows the Last-In-First-Out (LIFO) principle, where the last element added is the first to be removed. In contrast, a queue follows the First-In-First-Out (FIFO) principle, where the first element added is the first to be removed.
+                Q: What is a binary search tree (BST)? Answer: A binary search tree is a tree data structure in which each node has at most two children, referred to as the left and right child. For each node, all elements in the left subtree are less than the node's key, and all elements in the right subtree are greater than the node's key.
+                """
+            )
         })
     
     # Add user question
@@ -404,12 +411,31 @@ def text_to_speech_stream(text):
 @cross_origin(supports_credentials=True)
 def get_questions():
     try:
-        with DatabaseConnection() as conn:
+        print("\n=== GET /questions ===\n")
+        print(f"Database path: {DATABASE_PATH}")
+        print("Attempting to fetch questions from database...")
+
+        with get_db_connection() as conn:
             c = conn.cursor()
+            
+            # First, verify the table exists and its schema
+            c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='questions'")
+            table_exists = c.fetchone()
+            print(f"Questions table exists: {bool(table_exists)}")
+            
+            if not table_exists:
+                print("Questions table does not exist!")
+                return jsonify({'error': 'Questions table not found'}), 500
+                
             c.execute('SELECT * FROM questions ORDER BY timestamp DESC')
             questions = c.fetchall()
+            print(f"Found {len(questions)} questions in database")
             
-            return jsonify([{
+            if questions:
+                print("Sample question data:")
+                print(f"First row: {questions[0]}")
+            
+            questions_list = [{
                 'id': q[0],
                 'question': q[1],
                 'response': q[2],
@@ -418,9 +444,17 @@ def get_questions():
                 'subject': q[5],
                 'teacher': q[6],
                 'language': q[7]
-            } for q in questions])
+            } for q in questions]
+
+            print(f"Formatted {len(questions_list)} questions for response")
+            print("\n=== END GET /questions ===\n")
+            return jsonify(questions_list)
     except Exception as e:
+        print("\n=== ERROR in GET /questions ===\n")
         print(f'Error fetching questions: {str(e)}')
+        import traceback
+        print(f'Traceback: {traceback.format_exc()}')
+        print("\n=== END ERROR ===\n")
         return jsonify({'error': str(e)}), 500
 
 def allowed_file(filename):
@@ -442,7 +476,8 @@ def safe_generate_audio(text):
         print(f"Error generating audio: {e}")
         return None
 
-@app.route('/feedback', methods=['POST'])
+@app.route('/feedback', methods=['POST', 'OPTIONS'])
+@cross_origin(supports_credentials=True)
 def feedback():
     try:
         data = request.json
@@ -478,7 +513,7 @@ def feedback():
             audio_base64 = base64.b64encode(audio_stream.read()).decode('utf-8')
         
         # Get class info and store new question in a single transaction
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             
             # Get latest class info
@@ -493,6 +528,7 @@ def feedback():
                 (question, response, response_english, subject, teacher, language) 
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (question, response, response_english, subject, teacher, language))
+            conn.commit()
         
         return jsonify({
             'audio': audio_base64,
@@ -627,8 +663,12 @@ def send_email():
         error_response.status_code = 500
         return error_response
     
-@app.route('/grade-input-file', methods=['POST'])
+@app.route('/grade-input-file', methods=['POST', 'OPTIONS'])
+@cross_origin(supports_credentials=True)
 def handle_grading():
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'})
+
     student_temp_path = None
     try:
         print("Starting grading process...")
@@ -694,7 +734,7 @@ def handle_grading():
 
         return jsonify(enhanced_results)
     except Exception as e:
-        return False, str(e)
+        return jsonify({'error': str(e)}), 500
 
 def process_document(file_path, file_id):
     try:
@@ -718,7 +758,7 @@ def process_document(file_path, file_id):
         chunks = text_splitter.split_text(text)
         
         # Store chunks in database
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             for idx, chunk in enumerate(chunks):
                 c.execute('''
@@ -754,7 +794,7 @@ def process_document(file_path, file_id):
 def get_relevant_context(question, k=3):
     try:
         # Get all vector stores
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             c.execute('SELECT id, vector_store_path FROM files WHERE vector_store_path IS NOT NULL')
             stores = c.fetchall()
@@ -802,7 +842,7 @@ def upload_file():
             file.save(file_path)
             
             try:
-                with DatabaseConnection() as conn:
+                with get_db_connection() as conn:
                     c = conn.cursor()
                     c.execute('''
                         INSERT INTO files (filename, description, file_path, file_type)
@@ -834,20 +874,19 @@ def upload_file():
 @cross_origin(supports_credentials=True)
 def get_files():
     try:
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             c.execute('SELECT id, filename, description, upload_date, file_type FROM files ORDER BY upload_date DESC')
             files = c.fetchall()
             
-            return jsonify({
-                'files': [{
-                    'id': f[0],
-                    'name': f[1],
-                    'description': f[2],
-                    'uploadDate': f[3],
-                    'fileType': f[4]
-                } for f in files]
-            })
+            file_list = [{
+                'id': f[0],
+                'name': f[1],
+                'description': f[2],
+                'uploadDate': f[3],
+                'fileType': f[4]
+            } for f in files]
+            return jsonify(file_list)
             
     except Exception as e:
         print(f'Error in get_files: {e}')
@@ -872,20 +911,34 @@ init_chat_history_table()
 @app.route('/teacher/chat', methods=['POST'])
 def teacher_chat():
     try:
+        print("1. Starting teacher_chat endpoint")
         data = request.json
+        print("2. Received data:", data)
         if not data or 'message' not in data:
             return jsonify({'error': 'No message provided'}), 400
 
-        with DatabaseConnection() as conn:
+        print("3. Creating database connection")
+        with get_db_connection() as conn:
+            print("4. Database connection created")
             c = conn.cursor()
             
-            # Get context from questions database
-            c.execute('SELECT question, response, subject FROM questions ORDER BY timestamp DESC LIMIT 5')
-            recent_questions = c.fetchall()
+            print("5. Getting questions from database")
+            try:
+                c.execute('SELECT question, response, subject FROM questions ORDER BY timestamp DESC LIMIT 5')
+                recent_questions = c.fetchall()
+                print("6. Got questions:", len(recent_questions))
+            except Exception as e:
+                print("Error getting questions:", str(e))
+                recent_questions = []
             
-            # Get context from files
-            c.execute('SELECT filename, description FROM files ORDER BY upload_date DESC LIMIT 5')
-            recent_files = c.fetchall()
+            print("7. Getting files from database")
+            try:
+                c.execute('SELECT filename, description FROM files ORDER BY upload_date DESC LIMIT 5')
+                recent_files = c.fetchall()
+                print("8. Got files:", len(recent_files))
+            except Exception as e:
+                print("Error getting files:", str(e))
+                recent_files = []
             
             # Build context
             context = "Context from your teaching environment:\n\n"
@@ -900,9 +953,14 @@ def teacher_chat():
                 for name, desc in recent_files:
                     context += f"- {name}: {desc}\n"
 
-            # Get recent chat history for context (limit to last 5 messages to avoid token limits)
-            c.execute('SELECT role, content FROM chat_history ORDER BY timestamp DESC LIMIT 5')
-            chat_history = c.fetchall()
+            print("9. Getting chat history")
+            try:
+                c.execute('SELECT role, content FROM chat_history ORDER BY timestamp DESC LIMIT 5')
+                chat_history = c.fetchall()
+                print("10. Got chat history:", len(chat_history))
+            except Exception as e:
+                print("Error getting chat history:", str(e))
+                chat_history = []
             
             # Prepare messages for GPT-4
             messages = [
@@ -921,25 +979,32 @@ def teacher_chat():
             # Add current message
             messages.append({"role": "user", "content": data['message']})
 
-            # Generate AI response with error handling
+            print("11. Generating AI response")
             try:
+                print("12. Messages to send:", messages)
                 response = openai_client.chat.completions.create(
                     model="gpt-4o",
                     messages=messages,
                     temperature=0.7,
                     max_tokens=250
                 )
+                print("13. Got AI response")
             except Exception as e:
                 print(f'OpenAI API error: {str(e)}')
-                return jsonify({'error': 'Failed to generate AI response'}), 500
+                return jsonify({'error': f'Failed to generate AI response: {str(e)}'}), 500
             
             ai_response = response.choices[0].message.content
             
-            # Store messages in chat history
-            c.execute('INSERT INTO chat_history (role, content) VALUES (?, ?)',
-                      ('user', data['message']))
-            c.execute('INSERT INTO chat_history (role, content) VALUES (?, ?)',
-                      ('assistant', ai_response))
+            print("14. Storing messages in chat history")
+            try:
+                c.execute('INSERT INTO chat_history (role, content) VALUES (?, ?)',
+                          ('user', data['message']))
+                c.execute('INSERT INTO chat_history (role, content) VALUES (?, ?)',
+                          ('assistant', ai_response))
+                print("15. Stored messages successfully")
+            except Exception as e:
+                print("Error storing chat history:", str(e))
+                return jsonify({'error': f'Failed to store chat history: {str(e)}'}), 500
             
             # Get updated chat history
             c.execute('SELECT role, content, timestamp FROM chat_history ORDER BY timestamp ASC')
@@ -960,7 +1025,7 @@ def teacher_chat():
 @app.route('/teacher/chat/history', methods=['GET'])
 def get_chat_history():
     try:
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             c.execute('SELECT role, content, timestamp FROM chat_history ORDER BY timestamp ASC')
             history = [{
@@ -975,7 +1040,7 @@ def get_chat_history():
 @app.route('/teacher/chat/clear', methods=['POST'])
 def clear_chat_history():
     try:
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             c.execute('DELETE FROM chat_history')
             return jsonify({'message': 'Chat history cleared successfully'})

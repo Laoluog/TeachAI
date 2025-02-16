@@ -49,6 +49,7 @@ interface TeacherProps {
 
 export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [activeTab, setActiveTab] = useState('questions');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [emailRecipient, setEmailRecipient] = useState('');
   const [currentMessage, setCurrentMessage] = useState('');
@@ -92,13 +93,13 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
       const data = await response.json();
       console.log('Fetched files:', data);
       
-      if (!Array.isArray(data.files)) {
+      if (!Array.isArray(data)) {
         console.error('Files data is not an array:', data);
         setFiles([]);
         return;
       }
       
-      const processedFiles: File[] = data.files.map((file: FileResponse) => ({
+      const processedFiles: File[] = data.map((file: FileResponse) => ({
         id: file.id,
         name: file.name || file.filename || 'Unnamed file',
         description: file.description || '',
@@ -133,14 +134,29 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
     try {
       const response = await fetch('http://127.0.0.1:5000/questions', {
         mode: 'cors',
+        credentials: 'include',
         headers: {
           'Accept': 'application/json'
         }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('Fetched questions:', data);
+      
+      if (!Array.isArray(data)) {
+        console.error('Questions data is not an array:', data);
+        setQuestions([]);
+        return;
+      }
+      
       setQuestions(data);
     } catch (error) {
       console.error('Error fetching questions:', error);
+      setQuestions([]);
     }
   };
 
@@ -250,19 +266,25 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ message: currentMessage }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
       
+      if (!data.response) {
+        throw new Error('No response received from server');
+      }
+
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: data.response || 'Sorry, I could not process your request.',
+        content: data.response,
         timestamp: new Date().toISOString()
       };
 
@@ -271,7 +293,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
       console.error('Error sending chat message:', error);
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: 'Sorry, there was an error processing your message. Please try again.',
+        content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
         timestamp: new Date().toISOString()
       };
       setChatHistory(prev => [...prev, errorMessage]);
@@ -335,6 +357,11 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
       const response = await fetch('http://127.0.0.1:5000/grade-input-file', {
         method: 'POST',
         body: formData,
+        mode: 'cors',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
       });
   
       if (response.ok) {
@@ -354,6 +381,8 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
       }
     } catch (error) {
       console.error('Error submitting grading:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -617,10 +646,10 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                 />
                 <button 
                   type="submit" 
-                  className={`${styles.emailButton} ${isLoading ? styles.loading : ''}`}
-                  disabled={isLoading}
+                  className={`${styles.emailButton} ${isSubmitting ? styles.loading : ''}`}
+                  disabled={isSubmitting}
                 >
-                  {isLoading ? 'Grading...' : 'Submit for Grading'}
+                  {isSubmitting ? 'Grading...' : 'Submit for Grading'}
                 </button>
               </div>
             </form>
