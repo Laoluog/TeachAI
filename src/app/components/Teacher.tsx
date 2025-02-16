@@ -42,6 +42,22 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface StudentProfile {
+  id: number;
+  name: string;
+  avatar: string;
+  grade: number;
+  participationScore: number;
+  taInteractions: number;
+  mainLanguage: string;
+  attendanceRate: number;
+  lastActive: string;
+  submittedAssignments: number;
+  totalAssignments: number;
+  strengths: string[];
+  areasForImprovement: string[];
+}
+
 interface TeacherProps {
   questions: Question[];
   setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
@@ -49,6 +65,88 @@ interface TeacherProps {
 
 export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [activeTab, setActiveTab] = useState('questions');
+  // TODO: Replace hardcoded student data with real data from the backend
+  // We plan to implement a proper student management system that will:
+  // 1. Fetch real-time student data from the database
+  // 2. Track actual student interactions and participation
+  // 3. Calculate grades and statistics automatically
+  // 4. Allow teachers to update student profiles
+  // For now, using placeholder data for demonstration purposes
+  const [studentProfiles] = useState<StudentProfile[]>([
+    {
+      id: 1,
+      name: 'Laolu Oguneye',
+      avatar: '👨🏾‍💻',
+      // TODO: Implement automatic grade calculation and participation tracking
+      grade: 94.5,
+      participationScore: 9.2,
+      taInteractions: 15,
+      mainLanguage: 'Yoruba',
+      attendanceRate: 98,
+      // TODO: Implement real-time activity tracking system
+      lastActive: '2 hours ago',
+      submittedAssignments: 18,
+      totalAssignments: 20,
+      // TODO: Implement AI-driven skill assessment system
+      // Will analyze student code submissions and interactions to automatically identify strengths and areas for improvement
+      strengths: ['Algorithm Design', 'Data Structures', 'Problem Solving'],
+      areasForImprovement: ['Documentation', 'Test Coverage']
+    },
+    {
+      id: 2,
+      name: 'Varun Kute',
+      avatar: '👨🏽‍💻',
+      // TODO: Implement automatic grade calculation and participation tracking
+      grade: 92.8,
+      participationScore: 8.9,
+      taInteractions: 12,
+      mainLanguage: 'Hindi',
+      attendanceRate: 95,
+      // TODO: Implement real-time activity tracking system
+      lastActive: '1 day ago',
+      submittedAssignments: 19,
+      totalAssignments: 20,
+      // TODO: Implement AI-driven skill assessment system
+      strengths: ['System Design', 'Backend Development', 'Database Design'],
+      areasForImprovement: ['Frontend Polish', 'API Documentation']
+    },
+    {
+      id: 3,
+      name: 'Roberto Tamez',
+      avatar: '👨🏽‍💻',
+      // TODO: Implement automatic grade calculation and participation tracking
+      grade: 89.7,
+      participationScore: 9.5,
+      taInteractions: 18,
+      mainLanguage: 'Spanish',
+      attendanceRate: 92,
+      // TODO: Implement real-time activity tracking system
+      lastActive: '3 hours ago',
+      submittedAssignments: 17,
+      totalAssignments: 20,
+      // TODO: Implement AI-driven skill assessment system
+      strengths: ['UI/UX Design', 'Frontend Development', 'User Research'],
+      areasForImprovement: ['Code Optimization', 'Testing']
+    },
+    {
+      id: 4,
+      name: 'Sam Tesfai',
+      avatar: '👨🏾‍💻',
+      // TODO: Implement automatic grade calculation and participation tracking
+      grade: 91.2,
+      participationScore: 8.7,
+      taInteractions: 14,
+      mainLanguage: 'English',
+      attendanceRate: 94,
+      // TODO: Implement real-time activity tracking system
+      lastActive: '5 hours ago',
+      submittedAssignments: 18,
+      totalAssignments: 20,
+      // TODO: Implement AI-driven skill assessment system
+      strengths: ['Low-level Programming', 'Performance Optimization', 'Debugging'],
+      areasForImprovement: ['Code Documentation', 'Project Planning']
+    }
+  ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [emailRecipient, setEmailRecipient] = useState('');
@@ -71,6 +169,15 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [meetingId, setMeetingId] = useState('');
   const [passcode, setPasscode] = useState('');
   const [meetingSummary, setMeetingSummary] = useState('');
+  // Teaching Assistant Settings
+  const [allowBotAnswers, setAllowBotAnswers] = useState(true);
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('17:00');
+  const [maxQuestionsPerDay, setMaxQuestionsPerDay] = useState(10);
+  const [allowedSubjects, setAllowedSubjects] = useState(['Math', 'Physics', 'Chemistry', 'Computer Science']);
+  const [requireApproval, setRequireApproval] = useState(false);
+  const [autoTranslate, setAutoTranslate] = useState(true);
+  const [profanityFilter, setProfanityFilter] = useState(true);
   const router = useRouter();
 
   // Fetch questions, files, and chat history on component mount
@@ -78,7 +185,26 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
     fetchQuestions();
     loadChatHistory();
     fetchFiles();
+    loadTeacherSettings();
   }, []);
+
+  const loadTeacherSettings = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/teacher/settings');
+      if (!response.ok) throw new Error('Failed to load settings');
+      const settings = await response.json();
+      
+      setAllowBotAnswers(settings.allowBotAnswers);
+      setStartTime(settings.startTime);
+      setEndTime(settings.endTime);
+      setMaxQuestionsPerDay(settings.maxQuestionsPerDay);
+      setRequireApproval(settings.requireApproval);
+      setAutoTranslate(settings.autoTranslate);
+      setProfanityFilter(settings.profanityFilter);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
 
   const fetchFiles = async () => {
     setIsFileListLoading(true);
@@ -324,6 +450,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
 
   const handleEmailBlast = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const response = await fetch('http://127.0.0.1:5000/api/send-email', {
         method: 'POST',
@@ -341,8 +468,10 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         setEmailSubject('');
         setEmailBody('');
       }
+      setIsLoading(false);
     } catch (error) {
       console.error('Error sending email blast:', error);
+      setIsLoading(false);
     }
   };
 
@@ -444,6 +573,12 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           onClick={() => setActiveTab('zoom')}
         >
           Zoom
+        </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'students' ? styles.active : ''}`}
+          onClick={() => setActiveTab('students')}
+        >
+          Students
         </button>
       </nav>
 
@@ -611,8 +746,12 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                 placeholder="Email content..."
                 className={styles.emailBody}
               />
-              <button type="submit" className={styles.emailButton}>
-                Send to All Students
+              <button 
+                type="submit" 
+                className={`${styles.emailButton} ${isLoading ? styles.loading : ''}`}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Sending...' : 'Send to All Students'}
               </button>
             </form>
           </div>
@@ -698,6 +837,96 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
             <h2>Settings</h2>
             <div className={styles.settingsContent}>
               <div className={styles.settingSection}>
+                <h3>Teaching Assistant Controls</h3>
+                <div className={styles.settingItem}>
+                  <label className={styles.switchLabel}>
+                    <span>Allow AI Assistant Responses</span>
+                    <div className={styles.switch}>
+                      <input
+                        type="checkbox"
+                        checked={allowBotAnswers}
+                        onChange={(e) => setAllowBotAnswers(e.target.checked)}
+                      />
+                      <span className={styles.slider}></span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className={styles.settingItem}>
+                  <label>Available Hours</label>
+                  <div className={styles.timeRange}>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className={styles.timeInput}
+                    />
+                    <span>to</span>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className={styles.timeInput}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.settingItem}>
+                  <label>Maximum Questions per Student (Daily)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={maxQuestionsPerDay}
+                    onChange={(e) => setMaxQuestionsPerDay(parseInt(e.target.value))}
+                    className={styles.settingInput}
+                  />
+                </div>
+
+                <div className={styles.settingItem}>
+                  <label className={styles.switchLabel}>
+                    <span>Require Teacher Approval for Answers</span>
+                    <div className={styles.switch}>
+                      <input
+                        type="checkbox"
+                        checked={requireApproval}
+                        onChange={(e) => setRequireApproval(e.target.checked)}
+                      />
+                      <span className={styles.slider}></span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className={styles.settingItem}>
+                  <label className={styles.switchLabel}>
+                    <span>Auto-Translate Responses</span>
+                    <div className={styles.switch}>
+                      <input
+                        type="checkbox"
+                        checked={autoTranslate}
+                        onChange={(e) => setAutoTranslate(e.target.checked)}
+                      />
+                      <span className={styles.slider}></span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className={styles.settingItem}>
+                  <label className={styles.switchLabel}>
+                    <span>Enable Profanity Filter</span>
+                    <div className={styles.switch}>
+                      <input
+                        type="checkbox"
+                        checked={profanityFilter}
+                        onChange={(e) => setProfanityFilter(e.target.checked)}
+                      />
+                      <span className={styles.slider}></span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              
+              <div className={styles.settingSection}>
                 <h3>API Configuration</h3>
                 <div className={styles.settingItem}>
                   <label>OpenAI API Key</label>
@@ -733,7 +962,106 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                 </div>
               </div>
 
-              <button className={styles.saveButton}>Save Settings</button>
+              <button 
+                className={`${styles.saveButton} ${isLoading ? styles.loading : ''}`}
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const response = await fetch('http://127.0.0.1:5000/teacher/settings', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        allowBotAnswers,
+                        startTime,
+                        endTime,
+                        maxQuestionsPerDay,
+                        requireApproval,
+                        autoTranslate,
+                        profanityFilter,
+                      }),
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to save settings');
+                    // Show success message
+                  } catch (error) {
+                    console.error('Error saving settings:', error);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'students' && (
+          <div className={styles.studentsTab}>
+            <h2>Student Statistics</h2>
+            <div className={styles.studentGrid}>
+              {studentProfiles.map(student => (
+                <div key={student.id} className={styles.studentCard}>
+                  <div className={styles.studentHeader}>
+                    <span className={styles.studentAvatar}>{student.avatar}</span>
+                    <h3>{student.name}</h3>
+                    <span className={styles.lastActive}>Last active: {student.lastActive}</span>
+                  </div>
+                  
+                  <div className={styles.studentStats}>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>Grade</span>
+                      <span className={styles.statValue}>{student.grade}%</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>Participation</span>
+                      <span className={styles.statValue}>{student.participationScore}/10</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>TA Interactions</span>
+                      <span className={styles.statValue}>{student.taInteractions}</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>Main Language</span>
+                      <span className={styles.statValue}>{student.mainLanguage}</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>Attendance</span>
+                      <span className={styles.statValue}>{student.attendanceRate}%</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>Assignments</span>
+                      <span className={styles.statValue}>{student.submittedAssignments}/{student.totalAssignments}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.studentSkills}>
+                    <div className={styles.skillSection}>
+                      <h4>Strengths</h4>
+                      <div className={styles.skillTags}>
+                        {student.strengths.map((strength, index) => (
+                          <span key={index} className={`${styles.skillTag} ${styles.strengthTag}`}>
+                            {strength}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className={styles.skillSection}>
+                      <h4>Areas for Improvement</h4>
+                      <div className={styles.skillTags}>
+                        {student.areasForImprovement.map((area, index) => (
+                          <span key={index} className={`${styles.skillTag} ${styles.improvementTag}`}>
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -764,8 +1092,44 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                   className={styles.zoomInput}
                 />
               </div>
-              <button className={styles.zoomButton}>
-                Watch Recording
+              <button 
+                className={`${styles.zoomButton} ${isLoading ? styles.loading : ''}`}
+                disabled={isLoading || !meetingId.trim() || !passcode.trim()}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  setIsLoading(true);
+                  try {
+                    // Simulate network delay
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    const response = await fetch('http://127.0.0.1:5000/zoom/meeting-summary', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        meetingId,
+                        passcode,
+                      }),
+                    });
+
+                    if (!response.ok) {
+                      throw new Error('Failed to fetch meeting summary');
+                    }
+
+                    const data = await response.json();
+                    setMeetingSummary(data.summary);
+                    setPasscode('');
+                    setMeetingId('');
+                  } catch (error) {
+                    console.error('Error processing Zoom recording:', error);
+                    setMeetingSummary('Failed to process meeting recording. Please try again.');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              >
+                {isLoading ? 'Processing...' : 'Watch Recording'}
               </button>
             </div>
 
@@ -773,7 +1137,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
               <h3>Meeting Summary</h3>
               <div className={styles.summaryContent}>
                 {meetingSummary ? (
-                  <p>{meetingSummary}</p>
+                  meetingSummary
                 ) : (
                   <p className={styles.placeholder}>Meeting summary will appear here after the session...</p>
                 )}

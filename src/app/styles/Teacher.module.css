@@ -9,6 +9,12 @@
   100% { transform: rotate(360deg); }
 }
 
+@keyframes loading {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
 @keyframes gradient {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -197,6 +203,305 @@
 /* Settings Styles */
 .settings {
   animation: slideUp 0.5s ease-out forwards;
+}
+
+.settingsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.settingSection {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+}
+
+.settingSection h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1.5rem;
+}
+
+.settingItem {
+  margin-bottom: 1.5rem;
+}
+
+.settingItem:last-child {
+  margin-bottom: 0;
+}
+
+.settingItem label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.settingInput {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  color: #000000;
+}
+
+.settingInput:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  outline: none;
+}
+
+.timeRange {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.timeInput {
+  padding: 0.75rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  color: #000000;
+}
+
+.timeInput:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  outline: none;
+}
+
+.switchLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e5e5;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #4f46e5;
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.saveButton {
+  background: #4f46e5;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  width: 100%;
+  position: relative;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: #4338ca;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(67, 56, 202, 0.3);
+}
+
+.saveButton:disabled {
+  background: #a5a5a5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.saveButton.loading {
+  color: transparent;
+}
+
+.saveButton.loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  left: 50%;
+  margin: -10px 0 0 -10px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}
+
+/* Student Statistics Styles */
+.studentsTab {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+.studentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-top: 2rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.studentCard {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.studentCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+.studentHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.studentAvatar {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.studentHeader h3 {
+  margin: 0.5rem 0;
+  color: #1a1a1a;
+  font-size: 1.25rem;
+}
+
+.lastActive {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.studentStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0.75rem;
+  background: rgba(79, 70, 229, 0.05);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.statItem:hover {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.statLabel {
+  color: #4f46e5;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.statValue {
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.studentSkills {
+  margin-top: 1.5rem;
+}
+
+.skillSection {
+  margin-bottom: 1rem;
+}
+
+.skillSection h4 {
+  color: #1a1a1a;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.skillTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.skillTag {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.strengthTag {
+  background: rgba(16, 185, 129, 0.1);
+  color: rgb(16, 185, 129);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.improvementTag {
+  background: rgba(245, 158, 11, 0.1);
+  color: rgb(245, 158, 11);
+  border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 /* Zoom Styles */
@@ -1327,11 +1632,13 @@
 }
 
 /* Email and Grading Button Styles */
-.emailButton {
+.emailButton, .zoomButton {
   background: #4f46e5;
   color: white;
   padding: 1rem 2rem;
   border: none;
+  position: relative;
+  transition: all 0.3s ease;
   border-radius: 10px;
   font-size: 1.1rem;
   font-weight: 500;
@@ -1342,24 +1649,24 @@
   position: relative;
 }
 
-.emailButton:hover:not(:disabled) {
+.emailButton:hover:not(:disabled), .zoomButton:hover:not(:disabled) {
   background: #4338ca;
   transform: translateY(-2px);
   box-shadow: 0 10px 30px rgba(67, 56, 202, 0.3);
 }
 
-.emailButton:disabled {
+.emailButton:disabled, .zoomButton:disabled {
   background: #a5a5a5;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-.emailButton.loading {
+.emailButton.loading, .zoomButton.loading {
   color: transparent;
 }
 
-.emailButton.loading::after {
+.emailButton.loading::after, .zoomButton.loading::after {
   content: '';
   position: absolute;
   width: 20px;
@@ -1384,4 +1691,38 @@
 .fileInput:hover {
   border-color: #4f46e5;
   background: rgba(255, 255, 255, 0.95);
+}
+
+/* Zoom Meeting Summary Styles */
+.meetingSummary {
+  margin-top: 2rem;
+}
+
+.meetingSummary h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+}
+
+.summaryContent {
+  white-space: pre-line;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #1a1a1a;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.summaryContent p {
+  margin-bottom: 1rem;
+}
+
+.placeholder {
+  color: #6b7280;
+  font-style: italic;
 }

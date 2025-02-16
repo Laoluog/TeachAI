@@ -331,7 +331,7 @@ def generate_ai_response(question):
             "If needed, make sure to put out content in LaTeX format or use the conventions specific to that genre of question. "
             "Always respond in English - translation will be handled separately if needed. "
             "Use the provided context to inform your responses when relevant."
-            "Provide your response in plain text, no delimiters. No bold, no titles, none of that. All regular english font."
+            "Provide your response in plain text, no delimiters. No bold, no titles, none of that. All regular english font. DO NOT include hashtags, dashes, or asterisks of any kind for any reason."
         }
     ]
     
@@ -971,6 +971,8 @@ def teacher_chat():
                                f"The teacher's students have asked you questions which are stored in the database."
                                f"You are helping the teacher better understand their students."
                                f"You have access to student questions, teaching materials, and chat history. "
+                               f"Provide your response in plain text, no delimiters. No bold, no titles, none of that. All regular english font. "
+                               f"DO NOT include hashtags, dashes, or asterisks of any kind for any reason."
                                f"Use this context to provide informed responses.\n\n{context}"
                 }
             ]
@@ -1050,36 +1052,78 @@ def clear_chat_history():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# @app.route('/teacher/email', methods=['POST'])
-# def send_email_blast():
-#     try:
-#         data = request.json
-#         if not data or 'subject' not in data or 'body' not in data:
-#             return jsonify({'error': 'Missing subject or body'}), 400
+@app.route('/zoom/meeting-summary', methods=['POST'])
+def get_meeting_summary():
+    try:
+        data = request.json
+        meeting_id = data.get('meetingId')
+        passcode = data.get('passcode')
+        
+        # For now, return the example summary regardless of input
+        from meeting_summaries import EXAMPLE_MEETING_SUMMARY
+        return jsonify({'summary': EXAMPLE_MEETING_SUMMARY})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-#         # Get all student emails
-#         conn = sqlite3.connect('teachai.db')
-#         c = conn.cursor()
-#         c.execute('SELECT email FROM students')
-#         student_emails = [row[0] for row in c.fetchall()]
-#         conn.close()
+@app.route('/teacher/settings', methods=['GET', 'POST'])
+def handle_teacher_settings():
+    try:
+        conn = sqlite3.connect('teachai.db')
+        c = conn.cursor()
 
-#         if not student_emails:
-#             return jsonify({'error': 'No student emails found'}), 400
-
-#         # Send email
-#         success = send_email(data['subject'], data['body'], student_emails)
-#         if success:
-#             return jsonify({'message': 'Email sent successfully'})
-#         else:
-#             return jsonify({'error': 'Failed to send email'}), 500
-
-#     except Exception as e:
-#         return jsonify({'error': str(e)}), 500
-
-#     except Exception as e:
-#         print("Error in feedback route: {}".format(str(e)))  # Add server-side logging
-#         return jsonify({'error': str(e)}), 500
+        if request.method == 'POST':
+            data = request.json
+            
+            # Update settings
+            c.execute('''
+                INSERT OR REPLACE INTO teacher_settings (
+                    id, allow_bot_answers, start_time, end_time,
+                    max_questions_per_day, require_approval,
+                    auto_translate, profanity_filter, updated_at
+                ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (
+                data.get('allowBotAnswers', True),
+                data.get('startTime', '09:00'),
+                data.get('endTime', '17:00'),
+                data.get('maxQuestionsPerDay', 10),
+                data.get('requireApproval', False),
+                data.get('autoTranslate', True),
+                data.get('profanityFilter', True)
+            ))
+            
+            conn.commit()
+            return jsonify({'message': 'Settings updated successfully'})
+        else:
+            # Get current settings
+            c.execute('SELECT * FROM teacher_settings WHERE id = 1')
+            row = c.fetchone()
+            
+            if row is None:
+                # Insert default settings if none exist
+                c.execute('''
+                    INSERT INTO teacher_settings (id)
+                    VALUES (1)
+                ''')
+                conn.commit()
+                c.execute('SELECT * FROM teacher_settings WHERE id = 1')
+                row = c.fetchone()
+            
+            settings = {
+                'allowBotAnswers': bool(row[1]),
+                'startTime': row[2],
+                'endTime': row[3],
+                'maxQuestionsPerDay': row[4],
+                'requireApproval': bool(row[5]),
+                'autoTranslate': bool(row[6]),
+                'profanityFilter': bool(row[7])
+            }
+            
+            return jsonify(settings)
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

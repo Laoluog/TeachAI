@@ -72,6 +72,22 @@ def init_db():
             )
         ''')
         
+        # Create teacher_settings table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS teacher_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                allow_bot_answers BOOLEAN DEFAULT 1,
+                start_time TEXT DEFAULT '09:00',
+                end_time TEXT DEFAULT '17:00',
+                max_questions_per_day INTEGER DEFAULT 10,
+                require_approval BOOLEAN DEFAULT 0,
+                auto_translate BOOLEAN DEFAULT 1,
+                profanity_filter BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         # Note: chat_history table already created above
         
         conn.commit()
