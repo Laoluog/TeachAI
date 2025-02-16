@@ -445,52 +445,57 @@ def send_email():
 
 @app.route('/grade-input-file', methods=['POST'])
 def handle_grading():
+    student_temp_path = None
     try:
-        # Check if required files were uploaded
+        print("Starting grading process...")  # Debug log
+        
         if 'file' not in request.files:
             return jsonify({'error': 'No student file uploaded'}), 400
             
         student_file = request.files['file']
         assignment_name = request.form.get('assignmentName')
         comments = request.form.get('comments')
-        rubric_file = request.files.get('rubric')  # Optional rubric file
+        rubric_file = request.files.get('rubric')
         
-        # Check if files were actually selected
+        print(f"Received files: student={student_file.filename}, rubric={rubric_file.filename if rubric_file else 'None'}")  # Debug log
+        
         if student_file.filename == '':
             return jsonify({'error': 'No student file selected'}), 400
             
         # Create temporary files
         student_temp_path = os.path.join(UPLOAD_FOLDER, 'student_' + student_file.filename)
+        print(f"Saving student file to: {student_temp_path}")  # Debug log
         student_file.save(student_temp_path)
         
         try:
-            # Extract Q&A pairs from student work
+            print("Extracting Q&A pairs...")  # Debug log
             qa_pairs = extract_and_parse(student_temp_path)
+            print(f"Extracted {len(qa_pairs)} Q&A pairs")  # Debug log
             
-            # Process rubric if provided
             rubric_prompt = ""
             if rubric_file and rubric_file.filename != '':
+                print("Processing rubric...")  # Debug log
                 rubric_temp_path = os.path.join(UPLOAD_FOLDER, 'rubric_' + rubric_file.filename)
                 rubric_file.save(rubric_temp_path)
                 try:
                     rubric_text = extract_text(rubric_temp_path)
                     rubric_prompt = parse_rubric(rubric_text)
                     os.remove(rubric_temp_path)
+                    print("Rubric processed successfully")  # Debug log
                 except Exception as rubric_error:
                     print(f"Warning: Failed to process rubric: {rubric_error}")
 
-            # For now, using a sample answer key - you'll want to modify this
-            # TODO: Add answer key file upload in frontend and process it here
+            print("Setting up answer key...")  # Debug log
             answer_key_text = """
             1: Sample answer 1
             2: Sample answer 2
             """
             answer_key = parse_answer_key(answer_key_text)
             
-            # Grade the answers using the rubric if provided
+            print("Starting grading...")  # Debug log
             grading_results = grade_with_gemini(qa_pairs, answer_key, rubric_prompt)
+            print("Grading completed")  # Debug log
             
-            # Enhance results with assignment metadata
             enhanced_results = {
                 'success': True,
                 'results': grading_results,
@@ -506,16 +511,22 @@ def handle_grading():
             return jsonify(enhanced_results)
             
         finally:
-            # Clean up temporary files
-            if os.path.exists(student_temp_path):
+            if student_temp_path and os.path.exists(student_temp_path):
+                print(f"Cleaning up: removing {student_temp_path}")  # Debug log
                 os.remove(student_temp_path)
             
     except Exception as e:
+        import traceback
+        print(f"Error in handle_grading: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")  # Detailed error trace
+        # Clean up if error occurred
+        if student_temp_path and os.path.exists(student_temp_path):
+            os.remove(student_temp_path)
         return jsonify({
             'error': str(e),
-            'errorType': type(e).__name__
+            'errorType': type(e).__name__,
+            'traceback': traceback.format_exc()
         }), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
