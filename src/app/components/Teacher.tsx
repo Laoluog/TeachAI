@@ -50,6 +50,7 @@ interface TeacherProps {
 export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [activeTab, setActiveTab] = useState('questions');
   const [files, setFiles] = useState<File[]>([]);
+  const [emailRecipient, setEmailRecipient] = useState('');
   const [currentMessage, setCurrentMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,6 +58,14 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [assignmentName, setAssignmentName] = useState('');
+  const [gradingComments, setGradingComments] = useState('');
+  const [gradingFile, setGradingFile] = useState<globalThis.File | null>(null);
+  // Add these state variables
+  const [gradingResults, setGradingResults] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [rubricFile, setRubricFile] = useState<globalThis.File | null>(null);
   const router = useRouter();
 
   // Fetch questions, files, and chat history on component mount
@@ -286,17 +295,19 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const handleEmailBlast = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://127.0.0.1:5000/teacher/email', {
+      const response = await fetch('http://127.0.0.1:5000/api/send-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          // recipient: emailRecipient,
           subject: emailSubject,
-          body: emailBody,
+          message: emailBody,
         }),
       });
       if (response.ok) {
+        setEmailRecipient('');
         setEmailSubject('');
         setEmailBody('');
       }
@@ -305,6 +316,47 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
     }
   };
 
+  const handleGrading = async(e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!gradingFile) return;
+  
+    try {
+      const formData = new FormData();
+      formData.append('file', gradingFile);
+      formData.append('assignmentName', assignmentName);
+      formData.append('comments', gradingComments);
+      
+      // Add rubric if it exists
+      if (rubricFile) {
+        formData.append('rubric', rubricFile);
+      }
+  
+      const response = await fetch('http://127.0.0.1:5000/grade-input-file', {
+        method: 'POST',
+        body: formData,
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        setGradingResults(data.results);
+        setShowResults(true);
+        
+        // Clear form
+        setGradingFile(null);
+        setRubricFile(null);
+        setAssignmentName('');
+        setGradingComments('');
+        
+        // Reset file inputs
+        const fileInputs = document.querySelectorAll('input[type="file"]') as NodeListOf<HTMLInputElement>;
+        fileInputs.forEach(input => input.value = '');
+      }
+    } catch (error) {
+      console.error('Error submitting grading:', error);
+    }
+  };
+  
   return (
     <div className={styles.container}>
       <button 
@@ -337,12 +389,6 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           onClick={() => setActiveTab('email')}
         >
           Email Blast
-        </button>
-        <button
-          className={`${styles.tabButton} ${activeTab === 'settings' ? styles.active : ''}`}
-          onClick={() => setActiveTab('email')}
-        >
-          Settings
         </button>
       </nav>
 
@@ -487,12 +533,22 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           <div className={styles.email}>
             <h2 className={styles.sectionHeader}>Email Blast</h2>
             <form onSubmit={handleEmailBlast} className={styles.emailForm}>
+              {/* THIS IS FOR THE SINGLE SEND VERSION, RN WERE GONNA DO MASS SEND */}
+              {/* <input 
+                type="email"
+                value={emailRecipient}
+                onChange={(e) => setEmailRecipient(e.target.value)}
+                className={styles.emailInput} //this is the same on person
+                placeholder="Recipient Email"
+                required
+              /> */}
               <input
                 type="text"
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
                 placeholder="Email subject"
                 className={styles.emailSubject}
+                required
               />
               <textarea
                 value={emailBody}
@@ -505,6 +561,79 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
               </button>
             </form>
           </div>
+        )}
+        {activeTab === 'grading' && (
+          <div className={styles.grading}>
+            <h2>Grading</h2>
+            <form onSubmit={handleGrading} className={styles.emailForm} method="POST">
+              <div className={styles.uploadSection}>
+                <div className={styles.fileInputGroup}>
+                  <label>Student Assignment</label>
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg"
+                    onChange={(e) => setGradingFile(e.target.files?.[0] || null)}
+                    className={styles.fileInput}
+                    required
+                  />
+                </div>
+                
+                <div className={styles.fileInputGroup}>
+                  <label>Rubric</label>
+                  <input
+                    type="file"
+                    accept=".txt,.pdf,.docx,.png,.jpg,.jpeg"
+                    onChange={(e) => setRubricFile(e.target.files?.[0] || null)}
+                    className={styles.fileInput}
+                  />
+                </div>
+
+                <input
+                  type="text"
+                  value={assignmentName}
+                  onChange={(e) => setAssignmentName(e.target.value)}
+                  placeholder="Assignment Name"
+                  className={styles.emailSubject}
+                  required
+                />
+                <textarea
+                  value={gradingComments}
+                  onChange={(e) => setGradingComments(e.target.value)}
+                  placeholder="Grading comments..."
+                  className={styles.emailBody}
+                  required
+                />
+                <button type="submit" className={styles.emailButton}>
+                  Submit for Grading
+                </button>
+              </div>
+            </form>
+            {console.log('showResults:', showResults)} {/* Debug log */}
+          {console.log('gradingResults:', gradingResults)} {/* Debug log */}
+          
+          {showResults && gradingResults && (
+            <div className={styles.gradingResults}>
+              <h3>Grading Results</h3>
+              <div className={styles.overallScore}>
+                <h4>Overall Score: {(gradingResults.average_score * 100).toFixed(2)}%</h4>
+              </div>
+              
+              <div className={styles.individualResults}>
+                {gradingResults.individual_results?.map((result: any, index: number) => (
+                  <div key={index} className={styles.resultCard}>
+                    <h4>Question {result.question}</h4>
+                    <div className={styles.resultContent}>
+                      <p><strong>Student Answer:</strong> {result.student_answer}</p>
+                      <p><strong>Correct Answer:</strong> {result.correct_answer}</p>
+                      <p><strong>Score:</strong> {(result.score * 100).toFixed(0)}%</p>
+                      <p><strong>Explanation:</strong> {result.explanation}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         )}
       </div>
     </div>

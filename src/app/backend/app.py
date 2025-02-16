@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_file, redirect
+import requests
 from flask_cors import CORS, cross_origin
 from openai import OpenAI
 from elevenlabs.client import ElevenLabs
@@ -7,7 +8,12 @@ import os
 from dotenv import load_dotenv
 import base64
 from io import BytesIO
+import time
 import sqlite3
+from grade.grader import extract_and_parse, grade_with_gemini
+from grade.file_utils import extract_text, parse_answer_key, parse_rubric
+from datetime import datetime
+from PIL import Image
 from document_processor import document_bp
 
 # Load environment variables
@@ -181,7 +187,8 @@ cors = CORS(app, resources={
         "allow_headers": ["Content-Type", "Accept", "Authorization"],
         "expose_headers": ["Content-Type", "Accept"],
         "supports_credentials": True,
-        "send_wildcard": False
+        "send_wildcard": False,
+        "max_age": 3600
     }
 })
 
@@ -259,12 +266,6 @@ def init_db():
         ''')
 
 init_db()
-
-# Configure email settings
-EMAIL_SERVER = os.getenv('EMAIL_SERVER', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USERNAME = os.getenv('EMAIL_USERNAME')
-EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
 # Configure file upload settings
 UPLOAD_FOLDER = 'uploads'
@@ -420,25 +421,8 @@ def get_questions():
         print(f'Error fetching questions: {str(e)}')
         return jsonify({'error': str(e)}), 500
 
-
-
-def send_email(subject, body, recipients):
-    msg = MIMEMultipart()
-    msg['Subject'] = subject
-    msg['From'] = EMAIL_USERNAME
-    msg['To'] = ', '.join(recipients)
-    msg.attach(MIMEText(body, 'plain'))
-
-    try:
-        server = smtplib.SMTP(EMAIL_SERVER, EMAIL_PORT)
-        server.starttls()
-        server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Error sending email: {e}")
-        return False
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def safe_generate_response(question):
     """Safely generate AI response with error handling"""
@@ -517,8 +501,198 @@ def feedback():
         })
 
     except Exception as e:
-        print(f"Error in feedback route: {e}")
         return jsonify({'error': str(e)}), 500
+
+############### single send version#################
+# @app.route('/api/send-email', methods=['POST', 'OPTIONS'])
+# def send_email():
+#     if request.method == 'OPTIONS':
+#         return jsonify({'status': 'ok'})
+#     try:
+#         # Support both JSON and form data
+#         if request.is_json:
+#             data = request.get_json()
+#         else:
+#             data = request.form
+        
+#         recipient = data.get('recipient')
+#         subject = data.get('subject')
+#         message = data.get('message')
+
+#         if not all([recipient, subject, message]):
+#             error_response = jsonify({'error': 'Missing required email parameters'})
+#             error_response.status_code = 400
+#             return error_response
+
+#         MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY')
+#         MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN')
+#         sender_email = os.getenv('SENDER_EMAIL')
+
+#         if not MAILGUN_API_KEY or not MAILGUN_DOMAIN or not sender_email:
+#             error_response = jsonify({'error': 'Mailgun configuration is missing'})
+#             error_response.status_code = 500
+#             return error_response
+
+#         response = requests.post(
+#             f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
+#             auth=("api", MAILGUN_API_KEY),
+#             data={
+#                 "from": sender_email,
+#                 "to": [recipient],
+#                 "subject": subject,
+#                 "text": message,
+#             },
+#         )
+
+#         if response.status_code in [200, 202]:
+#             # For form submissions, redirect to your Next.js teacher page.
+#             if not request.is_json:
+#                 return redirect("http://localhost:3000/teacher")
+#             # For JSON requests, return JSON.
+#             else:
+#                 return jsonify({'message': 'Email sent successfully!'}), 200
+#         else:
+#             error_response = jsonify({'error': 'Failed to send email.', 'details': response.text})
+#             error_response.status_code = response.status_code
+#             return error_response
+
+#     except Exception as e:
+#         error_response = jsonify({'error': str(e)})
+#         error_response.status_code = 500
+#         return error_response
+#########################################################
+# 
+# 
+@app.route('/api/send-email', methods=['POST', 'OPTIONS'])
+def send_email():
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'})
+    try:
+        # Support both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
+        
+        subject = data.get('subject')
+        message = data.get('message')
+
+        if not all([subject, message]):
+            error_response = jsonify({'error': 'Missing required email parameters'})
+            error_response.status_code = 400
+            return error_response
+
+        MAILGUN_API_KEY = os.getenv('MAILGUN_API_KEY')
+        MAILGUN_DOMAIN = os.getenv('MAILGUN_DOMAIN')
+        sender_email = os.getenv('SENDER_EMAIL')
+
+        if not MAILGUN_API_KEY or not MAILGUN_DOMAIN or not sender_email:
+            error_response = jsonify({'error': 'Mailgun configuration is missing'})
+            error_response.status_code = 500
+            return error_response
+
+        recipients = ['laoluoguneye@gmail.com', 'varunmkute@gmail.com','samuelt0207@gmail.com']
+        for recipient in recipients:
+            response = requests.post(
+                f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
+                auth=("api", MAILGUN_API_KEY),
+                data={
+                    "from": sender_email,
+                    "to": recipient,
+                    "subject": subject,
+                    "text": message,
+                },
+            )
+            time.sleep(1);
+                
+            
+        
+
+        if response.status_code in [200, 202]:
+            # For form submissions, redirect to your Next.js teacher page.
+            if not request.is_json:
+                return redirect("http://localhost:3000/teacher")
+            # For JSON requests, return JSON.
+            else:
+                return jsonify({'message': 'Email sent successfully!'}), 200
+        else:
+            error_response = jsonify({'error': 'Failed to send email.', 'details': response.text})
+            error_response.status_code = response.status_code
+            return error_response
+
+    except Exception as e:
+        error_response = jsonify({'error': str(e)})
+        error_response.status_code = 500
+        return error_response
+    
+@app.route('/grade-input-file', methods=['POST'])
+def handle_grading():
+    student_temp_path = None
+    try:
+        print("Starting grading process...")
+
+        if 'file' not in request.files:
+            return jsonify({'error': 'No student file uploaded'}), 400
+
+        student_file = request.files['file']
+        assignment_name = request.form.get('assignmentName')
+        comments = request.form.get('comments')
+        rubric_file = request.files.get('rubric')
+
+        print(f"Received files: student={student_file.filename}, rubric={rubric_file.filename if rubric_file else 'None'}")
+
+        if student_file.filename == '':
+            return jsonify({'error': 'No student file selected'}), 400
+
+        student_temp_path = os.path.join(UPLOAD_FOLDER, 'student_' + student_file.filename)
+        print(f"Saving student file to: {student_temp_path}")
+
+        student_file.save(student_temp_path)
+
+        print("Extracting Q&A pairs...")
+        with Image.open(student_temp_path) as img:
+            qa_pairs = extract_and_parse(student_temp_path)
+        print(f"Extracted {len(qa_pairs)} Q&A pairs")
+
+        rubric_prompt = ""
+        if rubric_file and rubric_file.filename != '':
+            print("Processing rubric...")
+            rubric_temp_path = os.path.join(UPLOAD_FOLDER, 'rubric_' + rubric_file.filename)
+            rubric_file.save(rubric_temp_path)
+            try:
+                rubric_text = extract_text(rubric_temp_path)
+                rubric_prompt = parse_rubric(rubric_text)
+                os.remove(rubric_temp_path)
+                print("Rubric processed successfully")
+            except Exception as rubric_error:
+                print(f"Warning: Failed to process rubric: {rubric_error}")
+
+        print("Setting up answer key...")
+        answer_key_text = """
+        1: Sample answer 1
+        2: Sample answer 2
+        """
+        answer_key = parse_answer_key(answer_key_text)
+
+        print("Starting grading...")
+        grading_results = grade_with_gemini(qa_pairs, answer_key, rubric_prompt)
+        print("Grading completed")
+
+        enhanced_results = {
+            'success': True,
+            'results': grading_results,
+            'metadata': {
+                'assignmentName': assignment_name,
+                'comments': comments,
+                'hasRubric': bool(rubric_prompt),
+                'submissionDate': datetime.now().isoformat(),
+                'numberOfQuestions': len(qa_pairs)
+            }
+        }
+
+        return jsonify(enhanced_results)
+    except Exception as e:
+        return False, str(e)
 
 def process_document(file_path, file_id):
     try:
@@ -792,36 +966,36 @@ def clear_chat_history():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/teacher/email', methods=['POST'])
-def send_email_blast():
-    try:
-        data = request.json
-        if not data or 'subject' not in data or 'body' not in data:
-            return jsonify({'error': 'Missing subject or body'}), 400
+# @app.route('/teacher/email', methods=['POST'])
+# def send_email_blast():
+#     try:
+#         data = request.json
+#         if not data or 'subject' not in data or 'body' not in data:
+#             return jsonify({'error': 'Missing subject or body'}), 400
 
-        # Get all student emails
-        conn = sqlite3.connect('teachai.db')
-        c = conn.cursor()
-        c.execute('SELECT email FROM students')
-        student_emails = [row[0] for row in c.fetchall()]
-        conn.close()
+#         # Get all student emails
+#         conn = sqlite3.connect('teachai.db')
+#         c = conn.cursor()
+#         c.execute('SELECT email FROM students')
+#         student_emails = [row[0] for row in c.fetchall()]
+#         conn.close()
 
-        if not student_emails:
-            return jsonify({'error': 'No student emails found'}), 400
+#         if not student_emails:
+#             return jsonify({'error': 'No student emails found'}), 400
 
-        # Send email
-        success = send_email(data['subject'], data['body'], student_emails)
-        if success:
-            return jsonify({'message': 'Email sent successfully'})
-        else:
-            return jsonify({'error': 'Failed to send email'}), 500
+#         # Send email
+#         success = send_email(data['subject'], data['body'], student_emails)
+#         if success:
+#             return jsonify({'message': 'Email sent successfully'})
+#         else:
+#             return jsonify({'error': 'Failed to send email'}), 500
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
 
-    except Exception as e:
-        print("Error in feedback route: {}".format(str(e)))  # Add server-side logging
-        return jsonify({'error': str(e)}), 500
+#     except Exception as e:
+#         print("Error in feedback route: {}".format(str(e)))  # Add server-side logging
+#         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

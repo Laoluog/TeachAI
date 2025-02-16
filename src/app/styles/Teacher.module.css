@@ -909,7 +909,8 @@
   gap: 1rem;
 }
 
-.emailSubject {
+
+.emailSubject, .emailInput {
   width: 100%;
   padding: 0.75rem;
   border: 2px solid #e2e8f0;
@@ -933,4 +934,90 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
+}
+
+
+.gradingResults {
+  margin-top: 2rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.overallScore {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #4f46e5;
+  color: white;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.overallScore h4 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.individualResults {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.resultCard {
+  padding: 1.5rem;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.resultCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.resultCard h4 {
+  margin: 0 0 1rem 0;
+  color: #4f46e5;
+}
+
+.resultContent {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.resultContent p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.resultContent strong {
+  color: #374151;
+}
+
+.fileInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.fileInputGroup label {
+  font-weight: 500;
+  color: #4f46e5;
+  font-size: 0.9rem;
+}
+
+.fileInput {
+  padding: 0.75rem;
+  border: 2px dashed rgba(79, 70, 229, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+.fileInput:hover {
+  border-color: #4f46e5;
+  background: rgba(255, 255, 255, 0.95);
 }
