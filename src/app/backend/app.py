@@ -1,14 +1,14 @@
-from flask import Flask, request, jsonify, Response, send_file
-from flask_cors import CORS
+from flask import Flask, request, jsonify, Response
+from flask_cors import CORS, cross_origin
 from openai import OpenAI
 from elevenlabs.client import ElevenLabs
 from elevenlabs import VoiceSettings
 import os
 from dotenv import load_dotenv
 import base64
-from typing import IO
 from io import BytesIO
 import sqlite3
+from document_processor import document_bp
 
 # Load environment variables
 load_dotenv()
@@ -57,19 +57,30 @@ class DatabaseConnection:
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure CORS with specific options
+# Configure CORS
+app.config['CORS_HEADERS'] = 'Content-Type'
 cors = CORS(app, resources={
     r"/*": {
         "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "allow_headers": ["Content-Type", "Accept"],
+        "expose_headers": ["Content-Type", "Accept"],
+        "supports_credentials": True,
+        "send_wildcard": False
     }
 })
+
+# Register blueprints
+app.register_blueprint(document_bp)
 
 # Health check endpoint
 @app.route('/health', methods=['GET', 'OPTIONS'])
 def health_check():
-    return jsonify({'status': 'ok'})
+    response = jsonify({'status': 'ok'})
+    response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Accept')
+    return response
 
 # Initialize SQLite database
 def init_db():
@@ -90,14 +101,27 @@ def init_db():
             )
         ''')
         
-        # Files table
+        # Files table with vector store path
         c.execute('''
             CREATE TABLE IF NOT EXISTS files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 filename TEXT NOT NULL,
                 description TEXT,
                 upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                file_path TEXT NOT NULL
+                file_path TEXT NOT NULL,
+                vector_store_path TEXT,
+                file_type TEXT NOT NULL
+            )
+        ''')
+        
+        # Document chunks table for context
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS document_chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_id INTEGER,
+                chunk_text TEXT NOT NULL,
+                chunk_index INTEGER,
+                FOREIGN KEY (file_id) REFERENCES files (id)
             )
         ''')
         
@@ -161,12 +185,43 @@ def create_teaching_prompt(question):
     }]
 
 def generate_ai_response(question):
-    messages = create_teaching_prompt(question)
+    # Get relevant context from documents
+    contexts = get_relevant_context(question)
+    context_text = '\n'.join(contexts) if contexts else ''
+    
+    # Create messages with context
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an AI teaching assistant. Provide clear, concise, and helpful responses. "
+            "Focus on explaining concepts in a way that's easy to understand while maintaining academic accuracy. "
+            "If a question is unclear, ask for clarification. If topics are complex, break them down into simpler parts. "
+            "Be somewhat concise, and make sure to return only plain text. "
+            "If needed, make sure to put out content in LaTeX format or use the conventions specific to that genre of question. "
+            "Always respond in English - translation will be handled separately if needed. "
+            "Use the provided context to inform your responses when relevant."
+        }
+    ]
+    
+    # Add context if available
+    if context_text:
+        messages.append({
+            "role": "system",
+            "content": f"Context from relevant documents:\n{context_text}"
+        })
+    
+    # Add user question
+    messages.append({
+        "role": "user",
+        "content": question
+    })
+    
+    # Generate response
     response = openai_client.chat.completions.create(
-        model="gpt-4o",  # Using gpt-3.5-turbo as gpt-4o doesn't exist
+        model="gpt-4o",
         messages=messages,
         temperature=0.7,
-        max_tokens=500
+        max_tokens=1000
     )
     
     return response.choices[0].message.content
@@ -179,7 +234,7 @@ def text_to_speech_stream(text):
     try:
         print(f"Generating audio for text: {text[:100]}...")
         # Perform the text-to-speech conversion
-        response = elevenlabs_client.text_to_speech.convert(
+        audio_data = elevenlabs_client.text_to_speech.convert(
             voice_id="XrExE9yKIg1WjnnlVkGX",  # Matilda voice
             output_format="mp3_44100_128",  # Higher quality audio
             text=text,
@@ -195,16 +250,20 @@ def text_to_speech_stream(text):
         # Create a BytesIO object to hold the audio data in memory
         audio_stream = BytesIO()
         
-        # Write each chunk of audio data to the stream
-        chunk_count = 0
-        for chunk in response:
-            if chunk:
-                audio_stream.write(chunk)
-                chunk_count += 1
+        # Write the audio data to the stream
+        if isinstance(audio_data, bytes):
+            audio_stream.write(audio_data)
+        else:
+            # Handle streaming response
+            chunk_count = 0
+            for chunk in audio_data:
+                if chunk:
+                    audio_stream.write(chunk)
+                    chunk_count += 1
+            print(f"Successfully generated audio: {chunk_count} chunks written")
         
         # Reset stream position to the beginning
         audio_stream.seek(0)
-        print(f"Successfully generated audio: {chunk_count} chunks written")
         return audio_stream
         
     except Exception as e:
@@ -214,28 +273,30 @@ def text_to_speech_stream(text):
         print(f"Traceback: {traceback.format_exc()}")
         return None
 
-@app.route('/questions', methods=['GET'])
+@app.route('/questions', methods=['GET', 'OPTIONS'])
+@cross_origin(supports_credentials=True)
 def get_questions():
     try:
-        conn = sqlite3.connect('questions.db')
-        c = conn.cursor()
-        c.execute('SELECT * FROM questions ORDER BY timestamp DESC')
-        questions = c.fetchall()
-        conn.close()
-        
-        return jsonify([{
-            'id': q[0],
-            'question': q[1],
-            'response': q[2],
-            'timestamp': q[3],
-            'subject': q[4],
-            'teacher': q[5]
-        } for q in questions])
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            c.execute('SELECT * FROM questions ORDER BY timestamp DESC')
+            questions = c.fetchall()
+            
+            return jsonify([{
+                'id': q[0],
+                'question': q[1],
+                'response': q[2],
+                'response_english': q[3],
+                'timestamp': q[4],
+                'subject': q[5],
+                'teacher': q[6],
+                'language': q[7]
+            } for q in questions])
     except Exception as e:
+        print(f'Error fetching questions: {str(e)}')
         return jsonify({'error': str(e)}), 500
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def send_email(subject, body, recipients):
     msg = MIMEMultipart()
@@ -291,7 +352,7 @@ def feedback():
                 {"role": "user", "content": response_english}
             ]
             response = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",
                 messages=translation_messages,
                 temperature=0.3
             ).choices[0].message.content
@@ -335,7 +396,90 @@ def feedback():
         print(f"Error in feedback route: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/upload', methods=['POST'])
+def process_document(file_path, file_id):
+    try:
+        # Extract text based on file type
+        text = ''
+        file_ext = os.path.splitext(file_path)[1].lower()
+        
+        if file_ext == '.pdf':
+            with open(file_path, 'r', encoding='utf-8') as file:
+                text = file.read()
+        elif file_ext in ['.txt', '.doc', '.docx']:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                text = file.read()
+        
+        # Split text into chunks
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len
+        )
+        chunks = text_splitter.split_text(text)
+        
+        # Store chunks in database
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            for idx, chunk in enumerate(chunks):
+                c.execute('''
+                    INSERT INTO document_chunks (file_id, chunk_text, chunk_index)
+                    VALUES (?, ?, ?)
+                ''', (file_id, chunk, idx))
+            
+            # Create TF-IDF vectorizer and transform chunks
+            vectorizer = TfidfVectorizer()
+            tfidf_matrix = vectorizer.fit_transform(chunks)
+            
+            # Create vector store directory if it doesn't exist
+            vector_store_dir = os.path.join(UPLOAD_FOLDER, 'vector_stores')
+            if not os.path.exists(vector_store_dir):
+                os.makedirs(vector_store_dir)
+            
+            # Save vectorizer and matrix
+            vector_store_path = os.path.join(vector_store_dir, f'store_{file_id}')
+            import joblib
+            joblib.dump((vectorizer, tfidf_matrix), vector_store_path)
+            
+            # Update vector store path in files table
+            c.execute('''
+                UPDATE files
+                SET vector_store_path = ?
+                WHERE id = ?
+            ''', (vector_store_path, file_id))
+        
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+def get_relevant_context(question, k=3):
+    try:
+        # Get all vector stores
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            c.execute('SELECT id, vector_store_path FROM files WHERE vector_store_path IS NOT NULL')
+            stores = c.fetchall()
+        
+        if not stores:
+            return []
+        
+        # Initialize embeddings
+        embeddings = OpenAIEmbeddings()
+        
+        # Search across all vector stores
+        all_contexts = []
+        for file_id, store_path in stores:
+            if os.path.exists(store_path):
+                vector_store = FAISS.load_local(store_path, embeddings)
+                docs = vector_store.similarity_search(question, k=k)
+                all_contexts.extend([doc.page_content for doc in docs])
+        
+        return all_contexts
+    except Exception as e:
+        print(f'Error getting context: {e}')
+        return []
+
+@app.route('/upload', methods=['POST', 'OPTIONS'])
+@cross_origin(supports_credentials=True)
 def upload_file():
     try:
         if 'file' not in request.files:
@@ -352,14 +496,24 @@ def upload_file():
             file_path = os.path.join(UPLOAD_FOLDER, filename)
             file.save(file_path)
             
-            conn = sqlite3.connect('teachai.db')
-            c = conn.cursor()
-            c.execute('INSERT INTO files (filename, description, file_path) VALUES (?, ?, ?)',
-                      (filename, description, file_path))
-            conn.commit()
-            conn.close()
+            with DatabaseConnection() as conn:
+                c = conn.cursor()
+                c.execute('''
+                    INSERT INTO files (filename, description, file_path, file_type)
+                    VALUES (?, ?, ?, ?)
+                ''', (filename, description, file_path, os.path.splitext(filename)[1][1:]))
+                file_id = c.lastrowid
             
-            return jsonify({'message': 'File uploaded successfully'})
+            # Process document and create vector store
+            success, error = process_document(file_path, file_id)
+            if not success:
+                return jsonify({'error': f'Error processing document: {error}'}), 500
+            
+            return jsonify({
+                'message': 'File uploaded and processed successfully',
+                'file_id': file_id,
+                'filename': filename
+            }), 200
             
         return jsonify({'error': 'File type not allowed'}), 400
         
@@ -385,6 +539,22 @@ def get_files():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Chat history table initialization
+def init_chat_history_table():
+    with DatabaseConnection() as conn:
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+# Initialize chat history table
+init_chat_history_table()
+
 @app.route('/teacher/chat', methods=['POST'])
 def teacher_chat():
     try:
@@ -392,40 +562,109 @@ def teacher_chat():
         if not data or 'message' not in data:
             return jsonify({'error': 'No message provided'}), 400
 
-        # Get context from questions database
-        conn = sqlite3.connect('teachai.db')
-        c = conn.cursor()
-        c.execute('SELECT question, response FROM questions ORDER BY timestamp DESC LIMIT 10')
-        recent_questions = c.fetchall()
-        conn.close()
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            
+            # Get context from questions database
+            c.execute('SELECT question, response, subject FROM questions ORDER BY timestamp DESC LIMIT 5')
+            recent_questions = c.fetchall()
+            
+            # Get context from files
+            c.execute('SELECT filename, description FROM files ORDER BY upload_date DESC LIMIT 5')
+            recent_files = c.fetchall()
+            
+            # Build context
+            context = "Context from your teaching environment:\n\n"
+            
+            if recent_questions:
+                context += "Recent student questions:\n"
+                for q, r, s in recent_questions:
+                    context += f"Subject: {s}\nQ: {q}\nA: {r}\n\n"
+            
+            if recent_files:
+                context += "\nRecent teaching materials:\n"
+                for name, desc in recent_files:
+                    context += f"- {name}: {desc}\n"
 
-        # Create context for the AI
-        context = "Recent student questions and answers:\n"
-        for q, r in recent_questions:
-            context += f"Q: {q}\nA: {r}\n\n"
+            # Get recent chat history for context (limit to last 5 messages to avoid token limits)
+            c.execute('SELECT role, content FROM chat_history ORDER BY timestamp DESC LIMIT 5')
+            chat_history = c.fetchall()
+            
+            # Prepare messages for GPT-4
+            messages = [
+                {
+                    "role": "system",
+                    "content": f"You are an AI teaching assistant helping a teacher. "
+                               f"You have access to student questions, teaching materials, and chat history. "
+                               f"Use this context to provide informed responses.\n\n{context}"
+                }
+            ]
+            
+            # Add chat history to messages
+            for role, content in reversed(chat_history):
+                messages.append({"role": role, "content": content})
+            
+            # Add current message
+            messages.append({"role": "user", "content": data['message']})
 
-        # Generate AI response with context
-        messages = [
-            {
-                "role": "system",
-                "content": "You are a teaching assistant helping a teacher analyze student questions and performance. "
-                           "Use the context provided to give insights about student understanding and common questions."
-            },
-            {
-                "role": "user",
-                "content": f"{context}\n\nTeacher's question: {data['message']}"
-            }
-        ]
+            # Generate AI response with error handling
+            try:
+                response = openai_client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=250
+                )
+            except Exception as e:
+                print(f'OpenAI API error: {str(e)}')
+                return jsonify({'error': 'Failed to generate AI response'}), 500
+            
+            ai_response = response.choices[0].message.content
+            
+            # Store messages in chat history
+            c.execute('INSERT INTO chat_history (role, content) VALUES (?, ?)',
+                      ('user', data['message']))
+            c.execute('INSERT INTO chat_history (role, content) VALUES (?, ?)',
+                      ('assistant', ai_response))
+            
+            # Get updated chat history
+            c.execute('SELECT role, content, timestamp FROM chat_history ORDER BY timestamp ASC')
+            full_history = [{
+                'role': role,
+                'content': content,
+                'timestamp': timestamp
+            } for role, content, timestamp in c.fetchall()]
+            
+            return jsonify({
+                'response': ai_response,
+                'history': full_history
+            })
 
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=500
-        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-        return jsonify({'response': response.choices[0].message.content})
+@app.route('/teacher/chat/history', methods=['GET'])
+def get_chat_history():
+    try:
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            c.execute('SELECT role, content, timestamp FROM chat_history ORDER BY timestamp ASC')
+            history = [{
+                'role': role,
+                'content': content,
+                'timestamp': timestamp
+            } for role, content, timestamp in c.fetchall()]
+            return jsonify(history)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
+@app.route('/teacher/chat/clear', methods=['POST'])
+def clear_chat_history():
+    try:
+        with DatabaseConnection() as conn:
+            c = conn.cursor()
+            c.execute('DELETE FROM chat_history')
+            return jsonify({'message': 'Chat history cleared successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

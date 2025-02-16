@@ -258,7 +258,7 @@ export default function Student({ questions, setQuestions }: StudentProps) {
         </div>
       )}
 
-
+      <audio ref={audioRef} style={{ display: 'none' }} controls />
 
       <form onSubmit={handleSubmit} className={styles.form}>
         <textarea

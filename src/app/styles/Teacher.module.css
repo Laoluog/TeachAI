@@ -189,6 +189,358 @@
   line-height: 1.6;
 }
 
+/* File Upload Styles */
+.uploadSection {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: scaleIn 0.4s ease-out;
+}
+
+.uploadHeader {
+  margin-bottom: 1.5rem;
+}
+
+.uploadHeader h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.uploadHeader p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.uploadControls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fileInput {
+  padding: 1rem;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.fileInput:hover:not(:disabled) {
+  border-color: var(--primary-blue);
+  background: rgba(0, 113, 227, 0.05);
+}
+
+.fileInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.descriptionInput {
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  resize: vertical;
+  min-height: 80px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.descriptionInput:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+  outline: none;
+}
+
+.descriptionInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.uploadStatus {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 113, 227, 0.05);
+  border-radius: 8px;
+}
+
+.uploadStatus p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* File List Styles */
+.fileList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.fileCard {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+  animation: slideUp 0.4s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.fileHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.fileHeader h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.fileStatus {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  font-weight: 500;
+}
+
+.fileStatus.processing {
+  background: rgba(234, 179, 8, 0.1);
+  color: rgb(234, 179, 8);
+}
+
+.fileStatus.ready {
+  background: rgba(34, 197, 94, 0.1);
+  color: rgb(34, 197, 94);
+}
+
+.fileStatus.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgb(239, 68, 68);
+}
+
+.fileFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.fileDate {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.fileType {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--primary-blue);
+  background: rgba(0, 113, 227, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.errorMessage {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: rgb(239, 68, 68);
+  line-height: 1.4;
+}
+
+/* Section Headers */
+.sectionHeader {
+  color: #000000;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+}
+
+/* Chat Styles */
+.chat {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: calc(100vh - 200px);
+}
+
+.chatHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+}
+
+.clearChatButton {
+  padding: 0.5rem 1rem;
+  background-color: #ff375f;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.clearChatButton:hover {
+  background-color: #ff1f4b;
+}
+
+.chatMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  margin: 0 1rem;
+}
+
+.message {
+  max-width: 80%;
+  padding: 1rem;
+  border-radius: 12px;
+  animation: messageAppear 0.3s ease-out;
+}
+
+.userMessage {
+  align-self: flex-end;
+  background-color: #2997ff;
+  color: white;
+}
+
+.assistantMessage {
+  align-self: flex-start;
+  background-color: #f5f5f7;
+  color: #1d1d1f;
+}
+
+.messageContent {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.messageTime {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  text-align: right;
+}
+
+.loading {
+  align-self: center;
+  color: #86868b;
+  font-style: italic;
+  animation: pulse 1.5s infinite;
+}
+
+.chatForm {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 1rem;
+  border-radius: 12px;
+}
+
+.chatInput {
+  flex: 1;
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  resize: none;
+  height: 100px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  font-size: 1rem;
+  background: white;
+  color: #000000;
+  transition: border-color 0.2s;
+}
+
+.chatInput:focus {
+  outline: none;
+  border-color: #2997ff;
+}
+
+.chatInput:disabled {
+  background-color: #f5f5f7;
+  cursor: not-allowed;
+}
+
+.chatButton {
+  padding: 0.5rem 2rem;
+  background-color: #2997ff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.chatButton:hover:not(:disabled) {
+  background-color: #0077ed;
+}
+
+.chatButton:disabled {
+  background-color: #86868b;
+  cursor: not-allowed;
+}
+
+@keyframes messageAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Files Tab */
 .uploadSection {
   margin-bottom: 3rem;
@@ -225,6 +577,7 @@
   border-radius: 6px;
   margin-bottom: 1rem;
   resize: vertical;
+  color: #000000;
 }
 
 .uploadButton {
@@ -242,6 +595,61 @@
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
+}
+
+/* Email Tab */
+.emailForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.emailSubject {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  font-size: 1rem;
+  background: white;
+  color: #000000;
+  transition: border-color 0.2s;
+}
+
+.emailBody {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  resize: vertical;
+  min-height: 200px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  font-size: 1rem;
+  background: white;
+  color: #000000;
+  transition: border-color 0.2s;
+}
+
+.emailSubject:focus,
+.emailBody:focus {
+  outline: none;
+  border-color: #2997ff;
+}
+
+.emailButton {
+  padding: 0.75rem 1.5rem;
+  background-color: #2997ff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  align-self: flex-end;
+}
+
+.emailButton:hover {
+  background-color: #0077ed;
 }
 
 /* Chat Tab */
