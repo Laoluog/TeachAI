@@ -1,8 +1,10 @@
 node_modules
 .next
 .env
-.env.example
+.env.local
+.env*.local
 .vercel
 *.log
 .DS_Store
 uploads/
+.env.example
