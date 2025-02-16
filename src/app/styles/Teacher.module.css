@@ -265,6 +265,32 @@
   box-shadow: 0 10px 30px rgba(67, 56, 202, 0.3);
 }
 
+.saveButton:disabled {
+  background: #a5a5a5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.saveButton.loading {
+  position: relative;
+  color: transparent;
+}
+
+.saveButton.loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  left: 50%;
+  margin: -10px 0 0 -10px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}
+
 /* Grading Styles */
 .grading {
   animation: slideUp 0.5s ease-out forwards;
@@ -272,52 +298,69 @@
 
 .gradingResults {
   margin-top: 2rem;
-  background: rgba(255, 255, 255, 0.8);
+  background: white;
   border-radius: 20px;
   padding: 2rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 .overallScore {
-  background: #4f46e5;
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
   color: white;
-  padding: 1.5rem;
+  padding: 2rem;
   border-radius: 15px;
   margin-bottom: 2rem;
   text-align: center;
+  box-shadow: 0 10px 25px rgba(79, 70, 229, 0.2);
 }
 
 .overallScore h4 {
-  font-size: 1.5rem;
+  font-size: 2rem;
   margin: 0;
+  font-weight: 600;
 }
 
 .resultCard {
   background: white;
   border-radius: 15px;
   padding: 1.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(79, 70, 229, 0.1);
+  transition: all 0.3s ease;
+}
+
+.resultCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .resultCard h4 {
-  color: #4f46e5;
+  color: #1a1a1a;
   margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .resultContent {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
 .resultContent p {
   margin: 0;
   line-height: 1.6;
+  color: #1a1a1a;
+  font-size: 0.95rem;
 }
 
 .resultContent strong {
-  color: #4b5563;
+  color: #1a1a1a;
+  font-weight: 600;
 }
 
 /* File Upload Styles */
@@ -353,7 +396,26 @@
   background: rgba(79, 70, 229, 0.05);
 }
 
-.fileInput {
+/* File Input Styles */
+
+/* Document management file input */
+.documentFileInput {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.documentFileInput:disabled {
+  cursor: not-allowed;
+}
+
+/* Grading section file input */
+.gradingFileInput {
   width: auto;
   height: auto;
   opacity: 1;
@@ -364,10 +426,18 @@
   border-radius: 8px;
   background: white;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
-.fileInput:disabled {
+.gradingFileInput:hover:not(:disabled) {
+  border-color: rgba(79, 70, 229, 0.8);
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.gradingFileInput:disabled {
   cursor: not-allowed;
+  opacity: 0.6;
+  border-color: #ccc;
 }
 
 .fileInputWrapper::before {
@@ -376,6 +446,36 @@
   color: #4f46e5;
   font-size: 0.875rem;
   pointer-events: none;
+}
+
+/* File Upload Wrapper */
+.fileInputWrapper {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  border: 2px dashed rgba(79, 70, 229, 0.5);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  cursor: pointer;
+}
+
+.fileInputWrapper:hover {
+  border-color: rgba(79, 70, 229, 0.8);
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.fileInputWrapper::before {
+  content: 'Drop files here or click to upload';
+  position: absolute;
+  color: #4f46e5;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .loadingOverlay {
@@ -1133,9 +1233,60 @@
 }
 
 .fileInputGroup label {
+  color: #1a1a1a;
   font-weight: 500;
-  color: #4f46e5;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+}
+
+.fileInputGroup input[type="file"] {
+  color: #1a1a1a;
+}
+
+/* Email and Grading Button Styles */
+.emailButton {
+  background: #4f46e5;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  width: 100%;
+  position: relative;
+}
+
+.emailButton:hover:not(:disabled) {
+  background: #4338ca;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(67, 56, 202, 0.3);
+}
+
+.emailButton:disabled {
+  background: #a5a5a5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.emailButton.loading {
+  color: transparent;
+}
+
+.emailButton.loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  left: 50%;
+  margin: -10px 0 0 -10px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
 }
 
 .fileInput {

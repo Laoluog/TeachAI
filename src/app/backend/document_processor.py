@@ -19,63 +19,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'doc', 'docx'}
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Database configuration
-DATABASE_NAME = 'teachai.db'
-
-def init_db():
-    """Initialize database tables if they don't exist."""
-    print("Initializing database...")
-    try:
-        with DatabaseConnection() as conn:
-            c = conn.cursor()
-            
-            # Create files table with file_type column
-            c.execute('''
-                CREATE TABLE IF NOT EXISTS files (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    filename TEXT NOT NULL,
-                    description TEXT,
-                    file_path TEXT NOT NULL,
-                    file_type TEXT,
-                    vector_store_path TEXT,
-                    upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            print("Files table created/verified")
-            
-            # Create document_chunks table
-            c.execute('''
-                CREATE TABLE IF NOT EXISTS document_chunks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    file_id INTEGER,
-                    chunk_text TEXT,
-                    chunk_index INTEGER,
-                    chunk_embedding BLOB,
-                    FOREIGN KEY (file_id) REFERENCES files (id)
-                )
-            ''')
-            print("Document chunks table created/verified")
-            
-    except Exception as e:
-        print(f"Error initializing database: {e}")
-        raise
-
-# Database connection context manager
-class DatabaseConnection:
-    def __init__(self):
-        self.conn = None
-
-    def __enter__(self):
-        self.conn = sqlite3.connect(DATABASE_NAME)
-        return self.conn
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.conn:
-            if exc_type is None:
-                self.conn.commit()
-            else:
-                self.conn.rollback()
-            self.conn.close()
+from database import get_db_connection
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -134,16 +78,16 @@ def process_document(file_path, file_id):
             return False, "Could not split document into chunks"
         
         # Store chunks in database
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             print("Storing chunks in database...")
             for idx, chunk in enumerate(chunks):
                 if not chunk.strip():
                     continue  # Skip empty chunks
                 c.execute('''
-                    INSERT INTO document_chunks (file_id, chunk_text, chunk_index, chunk_embedding)
-                    VALUES (?, ?, ?, ?)
-                ''', (file_id, chunk, idx, None))
+                    INSERT INTO document_chunks (file_id, chunk_text, chunk_index)
+                    VALUES (?, ?, ?)
+                ''', (file_id, chunk, idx))
             
             # Create embeddings for chunks
             print("Creating embeddings...")
@@ -180,7 +124,7 @@ def get_relevant_context(question, k=3):
     """Get relevant context from processed documents."""
     try:
         # Get all vector stores
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             c.execute('SELECT id, vector_store_path FROM files WHERE vector_store_path IS NOT NULL')
             stores = c.fetchall()
@@ -255,7 +199,7 @@ def upload_file():
             print("File saved successfully")
             
             # Insert file record
-            with DatabaseConnection() as conn:
+            with get_db_connection() as conn:
                 c = conn.cursor()
                 c.execute('''
                     INSERT INTO files (filename, description, file_path, file_type)
@@ -272,7 +216,7 @@ def upload_file():
                 print(f"Document processing failed: {error}")
                 # Clean up the file if processing fails
                 os.remove(file_path)
-                with DatabaseConnection() as conn:
+                with get_db_connection() as conn:
                     c = conn.cursor()
                     c.execute('DELETE FROM files WHERE id = ?', (file_id,))
                 return jsonify({'error': f'Error processing document: {error}'}), 500
@@ -304,7 +248,7 @@ def get_files():
         return '', 204
         
     try:
-        with DatabaseConnection() as conn:
+        with get_db_connection() as conn:
             c = conn.cursor()
             c.execute('SELECT id, filename, description, upload_date, file_type FROM files ORDER BY upload_date DESC')
             files = c.fetchall()

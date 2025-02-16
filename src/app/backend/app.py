@@ -171,11 +171,20 @@ def init_db():
         print(f"Unexpected error during database initialization: {e}")
         raise Exception(f"Database initialization failed: {e}") from e
 
-# Initialize database
-init_db()
+from database import init_db, verify_tables_exist
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Initialize database
+try:
+    init_db()
+    if not verify_tables_exist():
+        print("Database verification failed, recreating tables...")
+        init_db()
+    print("Database initialized and verified successfully")
+except Exception as e:
+    print(f"Error initializing database: {e}")
 
 # Configure CORS
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -192,14 +201,7 @@ cors = CORS(app, resources={
     }
 })
 
-# Configure CORS
-CORS(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:3000"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Accept"]
-    }
-})
+
 
 # Register blueprints
 app.register_blueprint(document_bp, url_prefix='/document')

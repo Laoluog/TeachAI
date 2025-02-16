@@ -446,7 +446,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                   type="file"
                   onChange={handleFileUpload}
                   accept=".txt,.pdf,.doc,.docx"
-                  className={styles.fileInput}
+                  className={styles.documentFileInput}
                   disabled={isLoading}
                 />
                 {isLoading && (
@@ -585,7 +585,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                     type="file"
                     accept=".png,.jpg,.jpeg"
                     onChange={(e) => setGradingFile(e.target.files?.[0] || null)}
-                    className={styles.fileInput}
+                    className={styles.gradingFileInput}
                     required
                   />
                 </div>
@@ -596,7 +596,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                     type="file"
                     accept=".txt,.pdf,.docx,.png,.jpg,.jpeg"
                     onChange={(e) => setRubricFile(e.target.files?.[0] || null)}
-                    className={styles.fileInput}
+                    className={styles.gradingFileInput}
                   />
                 </div>
 
@@ -615,8 +615,12 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                   className={styles.emailBody}
                   required
                 />
-                <button type="submit" className={styles.emailButton}>
-                  Submit for Grading
+                <button 
+                  type="submit" 
+                  className={`${styles.emailButton} ${isLoading ? styles.loading : ''}`}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Grading...' : 'Submit for Grading'}
                 </button>
               </div>
             </form>
