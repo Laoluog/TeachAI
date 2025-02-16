@@ -218,6 +218,7 @@ export default function Student({ questions, setQuestions }: StudentProps) {
         <div className={styles.classInfo}>
           <span>Subject: {subject}</span>
           <span>Teacher: {teacher}</span>
+          <span>Student: Varun Kute</span>
         </div>
         <div className={styles.languageSelector}>
           <button

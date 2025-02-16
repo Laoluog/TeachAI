@@ -292,6 +292,13 @@ elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 # Configure ElevenLabs - using generate function directly as per quickstart
 # The API key will be loaded automatically from environment
 
+exemplar =""" For reference, the user is named Varun, who is working on a Computer Science study guide with the following 5 questions (Q) and answers.
+                Q 1: What is recursion? Answer: Recursion is a programming technique where a function calls itself to solve a problem by breaking it down into smaller, more manageable subproblems. 
+                Q 2: Define a linked list. Answer: A linked list is a linear data structure where elements, called nodes, are stored in sequence, with each node containing data and a reference (or link) to the next node in the sequence.
+                Q 3: What is the purpose of a base case in recursion? Answer: The base case in recursion provides a condition under which the recursive function stops calling itself, preventing infinite loops and ensuring that the problem is eventually solved.
+                Q 4: Explain the difference between a stack and a queue. Answer: A stack is a data structure that follows the Last-In-First-Out (LIFO) principle, where the last element added is the first to be removed. In contrast, a queue follows the First-In-First-Out (FIFO) principle, where the first element added is the first to be removed.
+                Q 5: What is a binary search tree (BST)? Answer: A binary search tree is a tree data structure in which each node has at most two children, referred to as the left and right child. For each node, all elements in the left subtree are less than the node's key, and all elements in the right subtree are greater than the node's key.
+                """
 def create_teaching_prompt(question):
     return [{
         "role": "system",
@@ -324,6 +331,7 @@ def generate_ai_response(question):
             "If needed, make sure to put out content in LaTeX format or use the conventions specific to that genre of question. "
             "Always respond in English - translation will be handled separately if needed. "
             "Use the provided context to inform your responses when relevant."
+            "Provide your response in plain text, no delimiters. No bold, no titles, none of that. All regular english font."
         }
     ]
     
@@ -332,15 +340,7 @@ def generate_ai_response(question):
         messages.append({
             "role": "system",
             "content": (
-                f"Context from relevant documents:\n{context_text}"
-                f"For reference, the user is working on a Computer Science study guide with the following 5 questions (Q) and answers."
-                """
-                Q: What is recursion? Answer: Recursion is a programming technique where a function calls itself to solve a problem by breaking it down into smaller, more manageable subproblems. 
-                Q: Define a linked list. Answer: A linked list is a linear data structure where elements, called nodes, are stored in sequence, with each node containing data and a reference (or link) to the next node in the sequence.
-                Q: What is the purpose of a base case in recursion? Answer: The base case in recursion provides a condition under which the recursive function stops calling itself, preventing infinite loops and ensuring that the problem is eventually solved.
-                Q: Explain the difference between a stack and a queue. Answer: A stack is a data structure that follows the Last-In-First-Out (LIFO) principle, where the last element added is the first to be removed. In contrast, a queue follows the First-In-First-Out (FIFO) principle, where the first element added is the first to be removed.
-                Q: What is a binary search tree (BST)? Answer: A binary search tree is a tree data structure in which each node has at most two children, referred to as the left and right child. For each node, all elements in the left subtree are less than the node's key, and all elements in the right subtree are greater than the node's key.
-                """
+                f"Context from relevant documents:\n{context_text}."
             )
         })
     
@@ -488,7 +488,8 @@ def feedback():
         language = data.get('language', 'en-US')
         
         # Generate English response first
-        response_english = safe_generate_response(question)
+        response_english = safe_generate_response(question + exemplar)
+        print(response_english)
         
         # If language is not English, get translated response
         if not language.startswith('en'):
@@ -967,6 +968,8 @@ def teacher_chat():
                 {
                     "role": "system",
                     "content": f"You are an AI teaching assistant helping a teacher. "
+                               f"The teacher's students have asked you questions which are stored in the database."
+                               f"You are helping the teacher better understand their students."
                                f"You have access to student questions, teaching materials, and chat history. "
                                f"Use this context to provide informed responses.\n\n{context}"
                 }

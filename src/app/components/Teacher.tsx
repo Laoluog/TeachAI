@@ -67,6 +67,10 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [gradingResults, setGradingResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [rubricFile, setRubricFile] = useState<globalThis.File | null>(null);
+  // Zoom related state
+  const [meetingId, setMeetingId] = useState('');
+  const [passcode, setPasscode] = useState('');
+  const [meetingSummary, setMeetingSummary] = useState('');
   const router = useRouter();
 
   // Fetch questions, files, and chat history on component mount
@@ -224,11 +228,15 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
       console.log('Upload successful:', data);
       
       setUploadDescription('');
-      // Remove processing file and fetch updated list
+      // Update the temporary file's status to ready
       if (tempFile) {
-        setFiles(prev => prev.filter(f => f.id !== tempFile!.id));
+        setFiles(prev => prev.map(f => 
+          f.id === tempFile!.id ? {
+            ...f,
+            status: 'ready'
+          } : f
+        ));
       }
-      await fetchFiles();
       
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -430,6 +438,12 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           onClick={() => setActiveTab('settings')}
         >
           Settings
+        </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'zoom' ? styles.active : ''}`}
+          onClick={() => setActiveTab('zoom')}
+        >
+          Zoom
         </button>
       </nav>
 
@@ -720,6 +734,50 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
               </div>
 
               <button className={styles.saveButton}>Save Settings</button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'zoom' && (
+          <div className={styles.zoomTab}>
+            <h2>Zoom Meeting</h2>
+            <div className={styles.zoomForm}>
+              <div className={styles.formGroup}>
+                <label htmlFor="meetingId">Meeting ID:</label>
+                <input
+                  type="text"
+                  id="meetingId"
+                  value={meetingId}
+                  onChange={(e) => setMeetingId(e.target.value)}
+                  placeholder="Enter Zoom meeting ID"
+                  className={styles.zoomInput}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="passcode">Passcode:</label>
+                <input
+                  type="text"
+                  id="passcode"
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  placeholder="Enter meeting passcode"
+                  className={styles.zoomInput}
+                />
+              </div>
+              <button className={styles.zoomButton}>
+                Watch Recording
+              </button>
+            </div>
+
+            <div className={styles.meetingSummary}>
+              <h3>Meeting Summary</h3>
+              <div className={styles.summaryContent}>
+                {meetingSummary ? (
+                  <p>{meetingSummary}</p>
+                ) : (
+                  <p className={styles.placeholder}>Meeting summary will appear here after the session...</p>
+                )}
+              </div>
             </div>
           </div>
         )}
