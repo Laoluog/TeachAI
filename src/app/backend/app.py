@@ -11,8 +11,8 @@ from typing import IO
 from io import BytesIO
 import time
 import sqlite3
-from grader import extract_and_parse, grade_with_gemini
-from file_utils import extract_text, parse_answer_key, parse_rubric
+from grade.grader import extract_and_parse, grade_with_gemini
+from grade.file_utils import extract_text, parse_answer_key, parse_rubric
 
 # Load environment variables
 load_dotenv()
