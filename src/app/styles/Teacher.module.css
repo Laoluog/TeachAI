@@ -1,7 +1,7 @@
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2); }
-  70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5); }
 }
 
 @keyframes gradient {
@@ -44,8 +44,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30z' fill='rgba(255,255,255,0.05)'/%3E%3C/svg%3E") repeat;
-  opacity: 0.5;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30z' fill='rgba(255,255,255,0.2)'/%3E%3C/svg%3E") repeat;
+  opacity: 0.8;
   z-index: 0;
 }
 
@@ -206,10 +206,9 @@
 .fileInput {
   margin-bottom: 1.5rem;
   padding: 1rem;
-  border: 2px dashed rgba(79, 70, 229, 0.3);
+  border: 2px dashed rgba(79, 70, 229, 0.7);
   border-radius: 15px;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255,255,255,0.2);
 }
 
 .fileInput:hover {
@@ -302,4 +301,36 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* Zoom Analytics Tab */
+.zoomAnalyticsContainer {
+  background-color: rgba(255,255,255,0.1);
+  border-radius: 15px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.meetingDetailsCard {
+  background-color: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  padding: 15px;
+  margin-top: 15px;
+}
+
+.participantsTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.participantsTable th, 
+.participantsTable td {
+  border: 1px solid rgba(79, 70, 229, 0.3);
+  padding: 8px;
+  text-align: left;
+}
+
+.participantsTable th {
+  background-color: rgba(79, 70, 229, 0.1);
 }

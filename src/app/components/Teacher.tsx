@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import styles from '../styles/Teacher.module.css';
 import { useRouter } from 'next/navigation';
+import ZoomMeetingUploader from './ZoomMeetingUploader';
+import ZoomAnalytics from './ZoomAnalytics';
 
 interface Question {
   id: number;
@@ -121,6 +123,9 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
 
   const router = useRouter();
 
+  // Add Zoom Analytics tab to the list of tabs
+  const tabs = ['questions', 'files', 'email', 'zoom-analytics'];
+
   return (
     <div className={styles.container}>
       <button 
@@ -130,30 +135,15 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         ← Back
       </button>
       <nav className={styles.nav}>
-        <button
-          className={`${styles.tabButton} ${activeTab === 'questions' ? styles.active : ''}`}
-          onClick={() => setActiveTab('questions')}
-        >
-          Student Questions
-        </button>
-        <button
-          className={`${styles.tabButton} ${activeTab === 'files' ? styles.active : ''}`}
-          onClick={() => setActiveTab('files')}
-        >
-          File Management
-        </button>
-        <button
-          className={`${styles.tabButton} ${activeTab === 'chat' ? styles.active : ''}`}
-          onClick={() => setActiveTab('chat')}
-        >
-          AI Chat
-        </button>
-        <button
-          className={`${styles.tabButton} ${activeTab === 'email' ? styles.active : ''}`}
-          onClick={() => setActiveTab('email')}
-        >
-          Email Blast
-        </button>
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            className={`${styles.tabButton} ${activeTab === tab ? styles.active : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
+          </button>
+        ))}
       </nav>
 
       <div className={styles.content}>
@@ -211,23 +201,6 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           </div>
         )}
 
-        {activeTab === 'chat' && (
-          <div className={styles.chat}>
-            <h2>AI Chat Assistant</h2>
-            <form onSubmit={handleChatSubmit} className={styles.chatForm}>
-              <textarea
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
-                placeholder="Ask about student performance, common questions, etc..."
-                className={styles.chatInput}
-              />
-              <button type="submit" className={styles.chatButton}>
-                Send
-              </button>
-            </form>
-          </div>
-        )}
-
         {activeTab === 'email' && (
           <div className={styles.email}>
             <h2>Email Blast</h2>
@@ -259,6 +232,13 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
                 Send to All Students
               </button>
             </form>
+          </div>
+        )}
+
+        {activeTab === 'zoom-analytics' && (
+          <div className={styles.zoomAnalytics}>
+            <h2>Zoom Analytics</h2>
+            <ZoomAnalytics />
           </div>
         )}
       </div>

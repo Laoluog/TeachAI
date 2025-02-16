@@ -66,12 +66,9 @@ export class OpenAIService {
   }
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('Missing OpenAI API key in environment variables');
-    }
     this.openai = new OpenAI({
-      apiKey: apiKey
+      apiKey: process.env.OPENAI_API_KEY || '',
+      dangerouslyAllowBrowser: true  // Only for client-side usage
     });
   }
 
