@@ -36,6 +36,12 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [emailBody, setEmailBody] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [assignmentName, setAssignmentName] = useState('');
+  const [gradingComments, setGradingComments] = useState('');
+  const [gradingFile, setGradingFile] = useState<globalThis.File | null>(null);
+  // Add these state variables
+  const [gradingResults, setGradingResults] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
 
   // Fetch questions on component mount
   useEffect(() => {
@@ -118,6 +124,41 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
       console.error('Error sending email blast:', error);
     }
   };
+
+
+
+  const handleGrading = async(e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!gradingFile) return;
+  
+    try {
+      const formData = new FormData();
+      formData.append('file', gradingFile);
+      formData.append('assignmentName', assignmentName);
+      formData.append('comments', gradingComments);
+  
+      const response = await fetch('http://127.0.0.1:5000/grade-input-file', {
+        method: 'POST',
+        body: formData,
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        setGradingResults(data.results);
+        setShowResults(true);
+        
+        // Clear form
+        setGradingFile(null);
+        setAssignmentName('');
+        setGradingComments('');
+      }
+    } catch (error) {
+      console.error('Error submitting grading:', error);
+    }
+  };
+
+
 
   const router = useRouter();
 
@@ -270,7 +311,57 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
         {activeTab === 'grading' && (
           <div className={styles.grading}>
             <h2>Grading</h2>
-            {/* Add your grading content here */}
+            <form onSubmit={handleGrading} className={styles.emailForm}>
+              <div className={styles.uploadSection}>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  className={styles.fileInput}
+                  onChange={(e) => setGradingFile(e.target.files?.[0] || null)}
+                  required
+                />
+                <input
+                  type="text"
+                  value={assignmentName}
+                  onChange={(e) => setAssignmentName(e.target.value)}
+                  placeholder="Assignment Name"
+                  className={styles.emailSubject}
+                  required
+                />
+                <textarea
+                  value={gradingComments}
+                  onChange={(e) => setGradingComments(e.target.value)}
+                  placeholder="Grading comments..."
+                  className={styles.emailBody}
+                  required
+                />
+                <button type="submit" className={styles.emailButton}>
+                  Submit Grade
+                </button>
+              </div>
+            </form>
+            {showResults && gradingResults && (
+              <div className={styles.gradingResults}>
+                <h3>Grading Results for {assignmentName}</h3>
+                <div className={styles.overallScore}>
+                  <h4>Overall Score: {(gradingResults.average_score * 100).toFixed(2)}%</h4>
+                </div>
+                
+                <div className={styles.individualResults}>
+                  {gradingResults.individual_results.map((result: any, index: number) => (
+                    <div key={index} className={styles.resultCard}>
+                      <h4>Question {result.question}</h4>
+                      <div className={styles.resultContent}>
+                        <p><strong>Student Answer:</strong> {result.student_answer}</p>
+                        <p><strong>Correct Answer:</strong> {result.correct_answer}</p>
+                        <p><strong>Score:</strong> {(result.score * 100).toFixed(0)}%</p>
+                        <p><strong>Feedback:</strong> {result.explanation}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

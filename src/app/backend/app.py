@@ -11,6 +11,8 @@ from typing import IO
 from io import BytesIO
 import time
 import sqlite3
+from grader import extract_and_parse, grade_with_gemini
+from file_utils import extract_text, parse_answer_key, parse_rubric
 
 # Load environment variables
 load_dotenv()
@@ -440,6 +442,57 @@ def send_email():
         error_response.status_code = 500
         return error_response
 
+@app.route('/grade-input-file', methods=['POST'])
+def handle_grading():
+    try:
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+            
+        file = request.files['file']
+        assignmentName = request.form.get('assignmentName')
+        comments = request.form.get('comments')
+        
+        # Check if a file was actually selected
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+            
+        # Create a temporary file to save the upload
+        temp_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(temp_path)
+        
+        try:
+            # Extract Q&A pairs from the image
+            qa_pairs = extract_and_parse(temp_path)
+            
+            # For now, using a simple answer key - you'll want to modify this
+            answer_key = {
+                "1": "Sample answer 1",
+                "2": "Sample answer 2"
+                # Add more answers as needed
+            }
+            
+            # Grade the answers
+            grading_results = grade_with_gemini(qa_pairs, answer_key)
+            
+            # Clean up the temporary file
+            os.remove(temp_path)
+            
+            return jsonify({
+                'success': True,
+                'results': grading_results,
+                'assignmentName': assignmentName,
+                'comments': comments
+            })
+            
+        except Exception as e:
+            # Clean up the temporary file if it exists
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise e
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
