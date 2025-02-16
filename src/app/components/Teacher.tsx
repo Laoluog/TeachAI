@@ -104,7 +104,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          recipient: emailRecipient,
+          // recipient: emailRecipient,
           subject: emailSubject,
           message: emailBody,
         }),
@@ -232,20 +232,22 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           <div className={styles.email}>
             <h2>Email Blast</h2>
             <form onSubmit={handleEmailBlast} className={styles.emailForm}>
-              <input
+              {/* THIS IS FOR THE SINGLE SEND VERSION, RN WERE GONNA DO MASS SEND */}
+              {/* <input 
                 type="email"
                 value={emailRecipient}
                 onChange={(e) => setEmailRecipient(e.target.value)}
                 className={styles.emailInput} //this is the same on person
                 placeholder="Recipient Email"
                 required
-              />
+              /> */}
               <input
                 type="text"
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
                 placeholder="Email subject"
                 className={styles.emailSubject}
+                required
               />
               <textarea
                 value={emailBody}
