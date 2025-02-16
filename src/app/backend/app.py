@@ -17,7 +17,22 @@ load_dotenv()
 openai_client = OpenAI(api_key=os.getenv('OPENAI'))
 
 # Initialize ElevenLabs client
-elevenlabs_client = ElevenLabs(api_key=os.getenv('ELEVENLABS_API_KEY'))
+elevenlabs_api_key = os.getenv('ELEVENLABS_API_KEY')
+if not elevenlabs_api_key:
+    print('Warning: ELEVENLABS_API_KEY not found in environment variables')
+elevenlabs_client = ElevenLabs(api_key=elevenlabs_api_key)
+
+# Add debug logging for text-to-speech
+def debug_tts_status():
+    try:
+        if elevenlabs_api_key:
+            print(f'ElevenLabs API key found (length: {len(elevenlabs_api_key)})')
+        else:
+            print('ElevenLabs API key not found')
+    except Exception as e:
+        print(f'Error checking TTS status: {e}')
+
+debug_tts_status()
 
 # Database configuration
 DATABASE_NAME = 'teachai.db'
@@ -67,9 +82,11 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 question TEXT NOT NULL,
                 response TEXT NOT NULL,
+                response_english TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 subject TEXT DEFAULT 'Computer Science',
-                teacher TEXT DEFAULT 'Dr. Smith'
+                teacher TEXT DEFAULT 'Dr. Smith',
+                language TEXT DEFAULT 'en-US'
             )
         ''')
         
@@ -135,6 +152,7 @@ def create_teaching_prompt(question):
         "If a question is unclear, ask for clarification. If topics are complex, break them down into simpler parts."
         "Be somewhat concise, and make sure to return only plain text."
         "If needed, make sure to put out content in LaTeX format or use the conventions specific to that genre of question."
+        "Always respond in English - translation will be handled separately if needed."
         "Be a great teacher!"
     },
     {
@@ -154,32 +172,47 @@ def generate_ai_response(question):
     return response.choices[0].message.content
     
 def text_to_speech_stream(text):
+    if not elevenlabs_api_key:
+        print("No ElevenLabs API key found. Audio generation disabled.")
+        return None
+        
     try:
+        print(f"Generating audio for text: {text[:100]}...")
         # Perform the text-to-speech conversion
         response = elevenlabs_client.text_to_speech.convert(
             voice_id="XrExE9yKIg1WjnnlVkGX",  # Matilda voice
-            output_format="mp3_22050_32",
+            output_format="mp3_44100_128",  # Higher quality audio
             text=text,
             model_id="eleven_multilingual_v2",
             voice_settings=VoiceSettings(
-                stability=0.0,
-                similarity_boost=1.0,
+                stability=0.5,  # Increased stability
+                similarity_boost=0.75,
                 style=0.0,
                 use_speaker_boost=True,
             ),
         )
+        
         # Create a BytesIO object to hold the audio data in memory
         audio_stream = BytesIO()
+        
         # Write each chunk of audio data to the stream
+        chunk_count = 0
         for chunk in response:
             if chunk:
                 audio_stream.write(chunk)
+                chunk_count += 1
+        
         # Reset stream position to the beginning
         audio_stream.seek(0)
+        print(f"Successfully generated audio: {chunk_count} chunks written")
         return audio_stream
+        
     except Exception as e:
-        print("Error generating audio: {}".format(str(e)))
-        raise
+        print(f"Error generating audio: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        return None
 
 @app.route('/questions', methods=['GET'])
 def get_questions():
@@ -229,12 +262,27 @@ def feedback():
             return jsonify({'error': 'No question provided'}), 400
 
         question = data['question']
+        language = data.get('language', 'en-US')
         
-        # Generate AI response with error handling
-        ai_response = safe_generate_response(question)
+        # Generate English response first
+        response_english = safe_generate_response(question)
+        
+        # If language is not English, get translated response
+        if not language.startswith('en'):
+            translation_messages = [
+                {"role": "system", "content": f"You are a translator. Translate the following text to {language} while preserving any formatting, LaTeX, or special notation:"},
+                {"role": "user", "content": response_english}
+            ]
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=translation_messages,
+                temperature=0.3
+            ).choices[0].message.content
+        else:
+            response = response_english
         
         # Generate audio stream with error handling
-        audio_stream = safe_generate_audio(ai_response)
+        audio_stream = safe_generate_audio(response)
         
         # If audio generation failed, continue without audio
         audio_base64 = ''
@@ -251,13 +299,17 @@ def feedback():
             subject = result[0] if result else 'Computer Science'
             teacher = result[1] if result else 'Dr. Smith'
             
-            # Store the new question
-            c.execute('INSERT INTO questions (question, response, subject, teacher) VALUES (?, ?, ?, ?)',
-                      (question, ai_response, subject, teacher))
+            # Store the new question with both responses
+            c.execute('''
+                INSERT INTO questions 
+                (question, response, response_english, subject, teacher, language) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (question, response, response_english, subject, teacher, language))
         
         return jsonify({
             'audio': audio_base64,
-            'response': ai_response,
+            'response': response,
+            'response_english': response_english,
             'subject': subject,
             'teacher': teacher
         })

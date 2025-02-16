@@ -161,9 +161,32 @@
 
 .questionMeta {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
   color: #718096;
   font-size: 0.875rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.language {
+  padding: 0.2rem 0.5rem;
+  background: rgba(79, 70, 229, 0.1);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 4px;
+  color: #4f46e5;
+  font-weight: 500;
+}
+
+.responseEnglish {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  color: #4f46e5;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 /* Files Tab */

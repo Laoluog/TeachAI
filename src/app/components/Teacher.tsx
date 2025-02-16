@@ -8,9 +8,11 @@ interface Question {
   id: number;
   question: string;
   response: string;
+  response_english?: string;
   timestamp: string;
   subject: string;
   teacher: string;
+  language?: string;
 }
 
 interface File {
@@ -157,12 +159,21 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
             <h2>Student Questions</h2>
             {questions.map((q) => (
               <div key={q.id} className={styles.questionCard}>
-                <p className={styles.questionText}>{q.question}</p>
-                <p className={styles.responseText}>{q.response}</p>
                 <div className={styles.questionMeta}>
                   <span>{new Date(q.timestamp).toLocaleString()}</span>
                   <span>{q.subject}</span>
+                  <span>{q.teacher}</span>
+                  {q.language && !q.language.startsWith('en') && (
+                    <span className={styles.language}>{q.language}</span>
+                  )}
                 </div>
+                <p className={styles.questionText}><strong>Q:</strong> {q.question}</p>
+                <p className={styles.responseText}><strong>A:</strong> {q.response}</p>
+                {q.response_english && q.language && !q.language.startsWith('en') && (
+                  <p className={styles.responseEnglish}>
+                    <strong>English Translation:</strong> {q.response_english}
+                  </p>
+                )}
               </div>
             ))}
           </div>
