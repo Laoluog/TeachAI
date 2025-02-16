@@ -1,0 +1,591 @@
+/*!*******************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[3]!./src/app/page.module.css ***!
+  \*******************************************************************************************************************************************************************************************************************************************************************/
+.page_main__GlU4n {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  padding: 2rem;
+}
+
+.page_container__aoG4z {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.page_title__3jonF {
+  font-size: 2.5rem;
+  color: #2d3748;
+  margin-bottom: 1rem;
+  text-align: center;
+  background: linear-gradient(120deg, #4a90e2, #805ad5);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.page_classInfo__uKKff {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  padding: 1rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.page_classInfo__uKKff span {
+  color: #4a5568;
+  font-size: 1.1rem;
+}
+
+.page_responseContainer__yTfDY {
+  width: 100%;
+  max-width: 800px;
+  min-height: 150px;
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.page_typingText__iIn0D {
+  color: #2d3748;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin: 0;
+  text-align: left;
+}
+
+.page_typingCursor__YfTfQ {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background-color: #4a90e2;
+  margin-left: 2px;
+  animation: page_blink__A5Bbl 1s infinite;
+  vertical-align: middle;
+}
+
+@keyframes page_blink__A5Bbl {
+  50% {
+    opacity: 0;
+  }
+}
+
+.page_audioContainer__s271A {
+  width: 100%;
+  max-width: 800px;
+  height: 200px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.page_speechIcon___QsAV {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #4a90e2, #805ad5);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.15s ease-in-out;
+}
+
+.page_speechIcon___QsAV svg {
+  width: 40px;
+  height: 40px;
+  color: white;
+}
+
+.page_speechIcon___QsAV.page_speaking__QxhIF {
+  animation: page_pulse__U_e85 1s ease-in-out infinite;
+}
+
+@keyframes page_pulse__U_e85 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.page_form__Ou5d6 {
+  color: black;
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.page_input___cVLA {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  resize: vertical;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.page_input___cVLA:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.page_button__vnlhW {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #4a90e2, #805ad5);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page_button__vnlhW:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+}
+
+.page_button__vnlhW:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.page_responseText__ZXAge {
+  width: 100%;
+  max-width: 800px;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.page_responseText__ZXAge h2 {
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.page_responseText__ZXAge p {
+  color: #4a5568;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/*!*****************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[3]!./src/app/styles/Student.module.css ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************************/
+.Student_container__KQXID {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.Student_classInfo__MCtC8 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  padding: 1rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.Student_classInfo__MCtC8 span {
+  color: #4a5568;
+  font-size: 1.1rem;
+}
+
+.Student_responseContainer__c3zma {
+  width: 100%;
+  max-width: 800px;
+  min-height: 150px;
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.Student_typingText__Yr_Y2 {
+  color: #2d3748;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin: 0;
+  text-align: left;
+}
+
+.Student_typingCursor__FQAIN {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background-color: #4a90e2;
+  margin-left: 2px;
+  animation: Student_blink__a072_ 1s infinite;
+  vertical-align: middle;
+}
+
+@keyframes Student_blink__a072_ {
+  50% {
+    opacity: 0;
+  }
+}
+
+.Student_audioContainer__YBzTc {
+  width: 100%;
+  max-width: 800px;
+  height: 200px;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.Student_speechIcon__1_9rY {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #4a90e2, #805ad5);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.15s ease-in-out;
+}
+
+.Student_speechIcon__1_9rY svg {
+  width: 40px;
+  height: 40px;
+  color: white;
+}
+
+.Student_speechIcon__1_9rY.Student_speaking__30AsE {
+  animation: Student_pulse__7lrBd 1s ease-in-out infinite;
+}
+
+@keyframes Student_pulse__7lrBd {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.Student_form__QWBmh {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.Student_input__w4_8C {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  resize: vertical;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.Student_input__w4_8C:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.Student_button__sCnZH {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #4a90e2, #805ad5);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.Student_button__sCnZH:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.Student_button__sCnZH:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/*!*****************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[3]!./src/app/styles/Teacher.module.css ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************************/
+.Teacher_container__Pjb0o {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.Teacher_nav__IqEpd {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 1rem;
+}
+
+.Teacher_tabButton___kC86 {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.Teacher_tabButton___kC86:hover {
+  background: #f7fafc;
+}
+
+.Teacher_tabButton___kC86.Teacher_active__AHKT3 {
+  background: #4a90e2;
+  color: white;
+}
+
+.Teacher_content__U1seP {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Questions Tab */
+.Teacher_questionCard__rqljY {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.Teacher_questionText__n3QN_ {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+}
+
+.Teacher_responseText__NZxMh {
+  color: #4a5568;
+  margin-bottom: 1rem;
+}
+
+.Teacher_questionMeta__7gdhn {
+  display: flex;
+  justify-content: space-between;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+/* Files Tab */
+.Teacher_uploadSection__b9dXf {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.Teacher_fileInput__heseg {
+  margin-bottom: 1rem;
+}
+
+.Teacher_descriptionInput__7yyQh {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  resize: vertical;
+}
+
+.Teacher_uploadButton__OeMQz {
+  background: #4a90e2;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.Teacher_fileCard__ChH5j {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Chat Tab */
+.Teacher_chatForm__RAeu3 {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.Teacher_chatInput__K7wNj {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.Teacher_chatButton__FnblE {
+  align-self: flex-end;
+  background: #4a90e2;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Email Tab */
+.Teacher_emailForm__wZk1O {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.Teacher_emailSubject__Uw_hx {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.Teacher_emailBody__8MjfN {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 200px;
+}
+
+.Teacher_emailButton__a3XUK {
+  align-self: flex-end;
+  background: #4a90e2;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/*!**************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[3]!./src/app/styles/Home.module.css ***!
+  \**************************************************************************************************************************************************************************************************************************************************************************/
+.Home_container__XXbpJ {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.Home_title__u58B2 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  text-align: center;
+}
+
+.Home_description__Lul1K {
+  font-size: 1.2rem;
+  color: #34495e;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.Home_roleContainer__b1rRI {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.Home_roleButton__xX3Qa {
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  color: #2c3e50;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.Home_roleButton__xX3Qa:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.Home_roleButton__xX3Qa.Home_selected__anzyM {
+  background: #3498db;
+  color: white;
+}
+
