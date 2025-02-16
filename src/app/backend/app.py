@@ -63,7 +63,11 @@ cors = CORS(app, resources={
     r"/*": {
         "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "allow_headers": ["Content-Type"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": True,
+        "send_wildcard": False,
+        "max_age": 3600
     }
 })
 
@@ -320,8 +324,10 @@ def feedback():
 
 
 #TODO: had send_email(subkject, body, recipients) just go through and override everywhere he did that
-@app.route('/api/send-email', methods=['POST'])
+@app.route('/api/send-email', methods=['POST', 'OPTIONS'])
 def send_email():
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'})
     try:
         # Support both JSON and form data
         if request.is_json:
@@ -361,7 +367,7 @@ def send_email():
         if response.status_code in [200, 202]:
             # For form submissions, redirect to your Next.js teacher page.
             if not request.is_json:
-                return redirect("http://localhost:3000/teacherPage")
+                return redirect("http://localhost:3000/teacher")
             # For JSON requests, return JSON.
             else:
                 return jsonify({'message': 'Email sent successfully!'}), 200

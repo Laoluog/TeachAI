@@ -31,6 +31,7 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const [activeTab, setActiveTab] = useState('questions');
   const [files, setFiles] = useState<File[]>([]);
   const [chatMessage, setChatMessage] = useState('');
+  const [emailRecipient, setEmailRecipient] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
@@ -97,17 +98,19 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
   const handleEmailBlast = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://127.0.0.1:5000/teacher/email', {
+      const response = await fetch('http://127.0.0.1:5000/api/send-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          recipient: emailRecipient,
           subject: emailSubject,
-          body: emailBody,
+          message: emailBody,
         }),
       });
       if (response.ok) {
+        setEmailRecipient('');
         setEmailSubject('');
         setEmailBody('');
       }
@@ -229,6 +232,14 @@ export default function Teacher({ questions, setQuestions }: TeacherProps) {
           <div className={styles.email}>
             <h2>Email Blast</h2>
             <form onSubmit={handleEmailBlast} className={styles.emailForm}>
+              <input
+                type="email"
+                value={emailRecipient}
+                onChange={(e) => setEmailRecipient(e.target.value)}
+                className={styles.emailInput} //this is the same on person
+                placeholder="Recipient Email"
+                required
+              />
               <input
                 type="text"
                 value={emailSubject}
